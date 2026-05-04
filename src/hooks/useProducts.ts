@@ -36,6 +36,7 @@ function mapApiProduct(p: ApiProduct): Product {
     colors: p.colors,
     sizes: p.sizes,
     inStock: p.inStock,
+    featured: p.featured,
   };
 }
 

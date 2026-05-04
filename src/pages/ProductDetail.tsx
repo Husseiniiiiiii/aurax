@@ -143,9 +143,25 @@ export default function ProductDetail() {
             )}
           </div>
 
-          <p className="mt-6 text-aurax-600 dark:text-aurax-300 leading-relaxed">
-            {product.description}
-          </p>
+          <div className="mt-4">
+            {product.inStock ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-extrabold px-2.5 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                {lang === "ar" ? "متوفر" : "In stock"}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-extrabold px-2.5 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                {lang === "ar" ? "غير متوفر" : "Out of stock"}
+              </span>
+            )}
+          </div>
+
+          {product.description && (
+            <p className="mt-6 text-aurax-600 dark:text-aurax-300 leading-relaxed">
+              {product.description}
+            </p>
+          )}
 
           {product.colors && product.colors.length > 0 && (
             <div className="mt-6">

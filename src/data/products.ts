@@ -14,6 +14,7 @@ export interface Product {
   colors?: string[];
   sizes?: string[];
   inStock: boolean;
+  featured?: boolean;
 }
 
 export type CategoryId =
