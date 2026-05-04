@@ -1,14 +1,11 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Filter, Search, SlidersHorizontal, X } from "lucide-react";
-import {
-  categories,
-  products as allProducts,
-  type CategoryId,
-} from "../data/products";
+import { categories, type CategoryId } from "../data/products";
 import ProductCard from "../components/ProductCard";
 import { useLanguage } from "../context/LanguageContext";
 import { formatIqdNumber } from "../utils/currency";
+import { useProducts } from "../hooks/useProducts";
 
 type SortKey = "featured" | "price-asc" | "price-desc" | "rating";
 
@@ -22,6 +19,7 @@ export default function Shop() {
   const [sort, setSort] = useState<SortKey>("featured");
   const [maxPrice, setMaxPrice] = useState(1500);
   const [showFilters, setShowFilters] = useState(false);
+  const { products: allProducts, loading } = useProducts();
 
   const filtered = useMemo(() => {
     let list = [...allProducts];
@@ -50,7 +48,7 @@ export default function Shop() {
         break;
     }
     return list;
-  }, [categoryParam, saleParam, queryParam, sort, maxPrice]);
+  }, [allProducts, categoryParam, saleParam, queryParam, sort, maxPrice]);
 
   const setCategory = (cat: CategoryId | null) => {
     const next = new URLSearchParams(params);
@@ -219,7 +217,9 @@ export default function Shop() {
             </div>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="card p-12 text-center text-aurax-500">...</div>
+          ) : filtered.length === 0 ? (
             <div className="card p-12 text-center">
               <h3 className="text-xl font-extrabold">{t("shop.noResults")}</h3>
               <p className="mt-2 text-aurax-500">{t("shop.noResultsDesc")}</p>
