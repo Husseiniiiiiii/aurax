@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight as ChevronRightIcon, X as XIcon } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -8,34 +9,59 @@ import {
   Plus,
   ShoppingBag,
 } from "lucide-react";
-import { getProductById, products } from "../data/products";
 import ProductMini from "../components/ProductMini";
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext";
 import { formatIqd } from "../utils/currency";
+import { useProducts } from "../hooks/useProducts";
 
 export default function ProductDetail() {
   const { id } = useParams();
-  const product = id ? getProductById(id) : undefined;
+  const { products: allProducts, loading } = useProducts();
+  const product = useMemo(
+    () => (id ? allProducts.find((p) => p.id === id) : undefined),
+    [allProducts, id]
+  );
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { t, lang } = useLanguage();
   const Arrow = lang === "ar" ? ArrowLeft : ArrowRight;
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(
-    product?.colors?.[0] ?? null
-  );
-  const [selectedSize, setSelectedSize] = useState<string | null>(
-    product?.sizes?.[0] ?? null
-  );
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
+  // When the product loads from the API, sync default color/size selection.
+  useEffect(() => {
+    if (product) {
+      setSelectedColor(product.colors?.[0] ?? null);
+      setSelectedSize(product.sizes?.[0] ?? null);
+    }
+  }, [product]);
 
   const related = useMemo(() => {
     if (!product) return [];
-    return products
+    return allProducts
       .filter((p) => p.category === product.category && p.id !== product.id)
       .slice(0, 4);
-  }, [product]);
+  }, [allProducts, product]);
+
+  if (loading) {
+    return (
+      <main className="container mx-auto px-4 py-10">
+        <div className="grid md:grid-cols-2 gap-10">
+          <div className="aspect-square rounded-2xl bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+          <div className="space-y-4">
+            <div className="h-9 w-2/3 rounded-lg bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-4 w-1/3 rounded-md bg-aurax-200/50 dark:bg-aurax-800/60 overflow-hidden shimmer" />
+            <div className="h-10 w-1/2 rounded-lg bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-20 w-full rounded-lg bg-aurax-200/50 dark:bg-aurax-800/60 overflow-hidden shimmer" />
+            <div className="h-12 w-full rounded-xl bg-aurax-300/60 dark:bg-aurax-700/70 overflow-hidden shimmer" />
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (!product) {
     return (
@@ -78,15 +104,11 @@ export default function ProductDetail() {
       </nav>
 
       <div className="grid md:grid-cols-2 gap-10">
-        <div className="card overflow-hidden">
-          <div className="aspect-square">
-            <img
-              src={product.image}
-              alt={displayName}
-              className="h-full w-full object-cover"
-            />
-          </div>
-        </div>
+        <ProductGallery
+          cover={product.image}
+          extra={product.images || []}
+          alt={displayName}
+        />
 
         <div>
           <h1 className="text-3xl md:text-4xl font-black">
@@ -125,7 +147,7 @@ export default function ProductDetail() {
             {product.description}
           </p>
 
-          {product.colors && (
+          {product.colors && product.colors.length > 0 && (
             <div className="mt-6">
               <h4 className="text-sm font-bold mb-2">{t("product.color")}</h4>
               <div className="flex items-center gap-2">
@@ -146,7 +168,7 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {product.sizes && (
+          {product.sizes && product.sizes.length > 0 && (
             <div className="mt-6">
               <h4 className="text-sm font-bold mb-2">{t("product.size")}</h4>
               <div className="flex flex-wrap gap-2">
@@ -215,6 +237,7 @@ export default function ProductDetail() {
         </div>
       </div>
 
+      {/* spacer */}
       {related.length > 0 && (
         <section className="mt-16 md:mt-20 pt-12 md:pt-16 border-t border-aurax-200/70 dark:border-aurax-800/90">
           <h2 className="text-2xl md:text-3xl font-black mb-5 md:mb-6">
@@ -228,5 +251,303 @@ export default function ProductDetail() {
         </section>
       )}
     </main>
+  );
+}
+
+// ───────────── Image gallery ─────────────
+
+function ProductGallery({
+  cover,
+  extra,
+  alt,
+}: {
+  cover: string;
+  extra: string[];
+  alt: string;
+}) {
+  const all = useMemo(() => {
+    const list = [cover, ...extra].filter(Boolean);
+    return Array.from(new Set(list));
+  }, [cover, extra]);
+  const [active, setActive] = useState(0);
+
+  // Reset when product changes
+  useEffect(() => {
+    setActive(0);
+  }, [cover]);
+
+  const [zoomOpen, setZoomOpen] = useState(false);
+
+  const go = (delta: number) =>
+    setActive((i) => (i + delta + all.length) % all.length);
+
+  if (all.length === 0) {
+    return (
+      <div className="card overflow-hidden aspect-square bg-aurax-100 dark:bg-aurax-800" />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="card overflow-hidden relative">
+        <button
+          type="button"
+          className="aspect-square block w-full cursor-zoom-in relative group"
+          onClick={() => setZoomOpen(true)}
+          aria-label="تكبير الصورة"
+        >
+          <img
+            src={all[active]}
+            alt={alt}
+            className="h-full w-full object-cover"
+          />
+        </button>
+        {all.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="السابق"
+              className="absolute top-1/2 -translate-y-1/2 left-3 h-10 w-10 grid place-items-center rounded-full bg-aurax-900/70 backdrop-blur text-white hover:bg-aurax-900 transition"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="التالي"
+              className="absolute top-1/2 -translate-y-1/2 right-3 h-10 w-10 grid place-items-center rounded-full bg-aurax-900/70 backdrop-blur text-white hover:bg-aurax-900 transition"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1 rounded-full bg-aurax-900/70 backdrop-blur">
+              {all.map((_, i) => (
+                <span
+                  key={i}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === active ? "w-5 bg-white" : "w-1.5 bg-white/40"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+      {all.length > 1 && (
+        <div className="grid grid-cols-4 gap-2">
+          {all.map((src, i) => (
+            <button
+              type="button"
+              key={src + i}
+              onClick={() => setActive(i)}
+              className={`aspect-square overflow-hidden rounded-xl border-2 transition ${
+                i === active
+                  ? "border-aurax-900 dark:border-white"
+                  : "border-transparent opacity-70 hover:opacity-100"
+              }`}
+            >
+              <img
+                src={src}
+                alt={`${alt} ${i + 1}`}
+                className="h-full w-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {zoomOpen && (
+        <ZoomLightbox
+          src={all[active]}
+          alt={alt}
+          onClose={() => setZoomOpen(false)}
+          onPrev={all.length > 1 ? () => go(-1) : undefined}
+          onNext={all.length > 1 ? () => go(1) : undefined}
+        />
+      )}
+    </div>
+  );
+}
+
+// ───────────── Zoom Lightbox ─────────────
+
+function ZoomLightbox({
+  src,
+  alt,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  src: string;
+  alt: string;
+  onClose: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+}) {
+  const [scale, setScale] = useState(1);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const drag = useRef<{ x: number; y: number; px: number; py: number } | null>(
+    null
+  );
+  const pinch = useRef<{ dist: number; scale: number } | null>(null);
+
+  // Reset on image change
+  useEffect(() => {
+    setScale(1);
+    setPos({ x: 0, y: 0 });
+  }, [src]);
+
+  // Lock body scroll + esc key
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+      if (e.key === "ArrowLeft" && onPrev) onPrev();
+      if (e.key === "ArrowRight" && onNext) onNext();
+      if (e.key === "+" || e.key === "=") setScale((s) => Math.min(5, s + 0.5));
+      if (e.key === "-") setScale((s) => Math.max(1, s - 0.5));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, onPrev, onNext]);
+
+  const clampPos = (x: number, y: number, s: number) => {
+    // Loose clamp so image stays roughly on screen
+    const max = 400 * s;
+    return {
+      x: Math.max(-max, Math.min(max, x)),
+      y: Math.max(-max, Math.min(max, y)),
+    };
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+    setScale((s) => Math.max(1, Math.min(5, s + delta)));
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center overscroll-contain"
+      onWheel={onWheel}
+      onClick={onClose}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        aria-label="إغلاق"
+        className="absolute top-4 right-4 h-10 w-10 grid place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+      >
+        <XIcon className="h-5 w-5" />
+      </button>
+
+
+      {onPrev && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onPrev();
+          }}
+          aria-label="السابق"
+          className="absolute left-4 top-1/2 -translate-y-1/2 h-11 w-11 grid place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+      )}
+      {onNext && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNext();
+          }}
+          aria-label="التالي"
+          className="absolute right-4 top-1/2 -translate-y-1/2 h-11 w-11 grid place-items-center rounded-full bg-white/10 text-white hover:bg-white/20 transition z-10"
+        >
+          <ChevronRightIcon className="h-6 w-6" />
+        </button>
+      )}
+
+      <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        onClick={(e) => e.stopPropagation()}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          if (scale === 1) setScale(2);
+          else {
+            setScale(1);
+            setPos({ x: 0, y: 0 });
+          }
+        }}
+        onMouseDown={(e) => {
+          if (scale <= 1) return;
+          drag.current = { x: e.clientX, y: e.clientY, px: pos.x, py: pos.y };
+        }}
+        onMouseMove={(e) => {
+          if (!drag.current) return;
+          const dx = e.clientX - drag.current.x;
+          const dy = e.clientY - drag.current.y;
+          setPos(clampPos(drag.current.px + dx, drag.current.py + dy, scale));
+        }}
+        onMouseUp={() => (drag.current = null)}
+        onMouseLeave={() => (drag.current = null)}
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            const [a, b] = [e.touches[0], e.touches[1]];
+            const dist = Math.hypot(
+              a.clientX - b.clientX,
+              a.clientY - b.clientY
+            );
+            pinch.current = { dist, scale };
+          } else if (e.touches.length === 1 && scale > 1) {
+            const t = e.touches[0];
+            drag.current = { x: t.clientX, y: t.clientY, px: pos.x, py: pos.y };
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2 && pinch.current) {
+            const [a, b] = [e.touches[0], e.touches[1]];
+            const dist = Math.hypot(
+              a.clientX - b.clientX,
+              a.clientY - b.clientY
+            );
+            const next = Math.max(
+              1,
+              Math.min(5, (pinch.current.scale * dist) / pinch.current.dist)
+            );
+            setScale(next);
+          } else if (e.touches.length === 1 && drag.current) {
+            const t = e.touches[0];
+            const dx = t.clientX - drag.current.x;
+            const dy = t.clientY - drag.current.y;
+            setPos(clampPos(drag.current.px + dx, drag.current.py + dy, scale));
+          }
+        }}
+        onTouchEnd={() => {
+          pinch.current = null;
+          drag.current = null;
+        }}
+        style={{
+          transform: `translate(${pos.x}px, ${pos.y}px) scale(${scale})`,
+          transition: drag.current || pinch.current ? "none" : "transform .2s",
+          cursor: scale > 1 ? "grab" : "zoom-in",
+          maxWidth: "92vw",
+          maxHeight: "92vh",
+          touchAction: "none",
+          userSelect: "none",
+        }}
+        className="select-none"
+      />
+    </div>
   );
 }

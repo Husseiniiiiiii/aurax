@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Filter, Search, SlidersHorizontal, X } from "lucide-react";
 import { categories, type CategoryId } from "../data/products";
@@ -17,9 +17,20 @@ export default function Shop() {
   const { t, lang } = useLanguage();
 
   const [sort, setSort] = useState<SortKey>("featured");
-  const [maxPrice, setMaxPrice] = useState(1500);
-  const [showFilters, setShowFilters] = useState(false);
   const { products: allProducts, loading } = useProducts();
+  // Upper bound of the price slider = highest product price (min 1,000,000 IQD)
+  const priceCeiling = useMemo(() => {
+    const max = allProducts.reduce((m, p) => Math.max(m, p.price), 0);
+    return Math.max(1_000_000, Math.ceil(max / 50_000) * 50_000);
+  }, [allProducts]);
+  const [maxPrice, setMaxPrice] = useState(priceCeiling);
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Keep the slider in sync when products load and ceiling changes.
+  // If the user hasn't moved it below, snap to the new ceiling.
+  useEffect(() => {
+    setMaxPrice((prev) => (prev < priceCeiling ? prev : priceCeiling));
+  }, [priceCeiling]);
 
   const filtered = useMemo(() => {
     let list = [...allProducts];
@@ -59,7 +70,7 @@ export default function Shop() {
 
   const clearAll = () => {
     setParams(new URLSearchParams());
-    setMaxPrice(1500);
+    setMaxPrice(priceCeiling);
     setSort("featured");
   };
 
@@ -173,8 +184,8 @@ export default function Shop() {
               <input
                 type="range"
                 min={0}
-                max={1500}
-                step={50}
+                max={priceCeiling}
+                step={Math.max(1000, Math.round(priceCeiling / 100))}
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
                 className="w-full accent-aurax-700"

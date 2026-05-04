@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
-import { LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const { user, login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -17,6 +17,28 @@ export default function Login() {
     const from =
       (location.state as { from?: string } | null)?.from || "/admin";
     return <Navigate to={from} replace />;
+  }
+
+  // Shimmer skeleton while restoring session from token
+  if (authLoading) {
+    return (
+      <main className="container mx-auto px-4 py-16 max-w-md">
+        <div className="card p-8 space-y-6">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-16 w-16 rounded-2xl bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-6 w-40 rounded-lg bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-3 w-56 rounded-md bg-aurax-200/50 dark:bg-aurax-800/60 overflow-hidden shimmer" />
+          </div>
+          <div className="space-y-3">
+            <div className="h-3 w-24 rounded-md bg-aurax-200/50 dark:bg-aurax-800/60 overflow-hidden shimmer" />
+            <div className="h-11 w-full rounded-xl bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-3 w-20 rounded-md bg-aurax-200/50 dark:bg-aurax-800/60 overflow-hidden shimmer" />
+            <div className="h-11 w-full rounded-xl bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer" />
+            <div className="h-12 w-full rounded-xl bg-aurax-300/60 dark:bg-aurax-700/70 overflow-hidden shimmer mt-2" />
+          </div>
+        </div>
+      </main>
+    );
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -84,9 +106,22 @@ export default function Login() {
           <button
             type="submit"
             disabled={submitting}
-            className="btn-primary w-full disabled:opacity-50"
+            className="btn-primary w-full disabled:opacity-80 relative overflow-hidden inline-flex items-center justify-center gap-2"
           >
-            {submitting ? "جاري الدخول..." : "تسجيل الدخول"}
+            {submitting && (
+              <span
+                aria-hidden
+                className="absolute inset-0 shimmer opacity-70"
+              />
+            )}
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>جاري الدخول...</span>
+              </>
+            ) : (
+              <span>تسجيل الدخول</span>
+            )}
           </button>
         </form>
       </div>

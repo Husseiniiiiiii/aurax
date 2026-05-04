@@ -108,6 +108,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  updateCategory: (id: string, body: Partial<ApiCategory>) =>
+    request<ApiCategory>(`/api/categories/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
   deleteCategory: (id: string) =>
     request<void>(`/api/categories/${id}`, { method: "DELETE" }),
 
@@ -118,6 +123,23 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   me: () => request<AuthUser>("/api/auth/me"),
+
+  uploadImage: async (file: File): Promise<{ url: string; key: string }> => {
+    if (!API_ENABLED) throw new Error("API not configured");
+    const token = getToken();
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch(`${API_URL}/api/upload/image`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: fd,
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Upload ${res.status}: ${text || res.statusText}`);
+    }
+    return res.json();
+  },
 
   createOrder: (body: {
     customerName: string;

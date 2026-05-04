@@ -73,6 +73,22 @@
     @apply w-full rounded-xl bg-white dark:bg-aurax-800 border border-aurax-200 dark:border-aurax-700 px-4 py-2.5 text-sm placeholder:text-aurax-400 focus:outline-none focus:ring-2 focus:ring-aurax-500/40 focus:border-aurax-500 transition;
   }
 
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Prevent iOS Safari from auto-zooming on focus: any text input/textarea/select must be >=16px */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
   .chip {
     @apply inline-flex items-center gap-1.5 rounded-full border border-aurax-200 dark:border-aurax-700 bg-white/70 dark:bg-aurax-800/60 px-3 py-1 text-xs font-medium text-aurax-700 dark:text-aurax-200;
   }

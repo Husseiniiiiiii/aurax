@@ -30,6 +30,7 @@ function mapApiProduct(p: ApiProduct): Product {
     rating: 4.5,
     reviews: 0,
     image: p.image,
+    images: p.images ?? [],
     description: p.description ?? "",
     badge: (p.badge as Product["badge"]) ?? undefined,
     colors: p.colors,

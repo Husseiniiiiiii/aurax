@@ -4,16 +4,19 @@ import {
   ChevronRight,
   Globe,
   Heart,
+  LayoutDashboard,
   Languages,
+  LogIn,
+  LogOut,
   Menu,
   Search,
   ShoppingBag,
-  User,
   X,
 } from "lucide-react";
 import Logo from "./Logo";
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -25,7 +28,6 @@ export default function Navbar() {
     { to: "/", label: t("nav.home") },
     { to: "/shop", label: t("nav.shop") },
     { to: "/categories", label: t("nav.categories") },
-    { to: "/about", label: t("nav.about") },
   ];
 
   useEffect(() => {
@@ -155,6 +157,7 @@ interface SideDrawerProps {
 
 function SideDrawer({ open, onClose, navLinks }: SideDrawerProps) {
   const { t, lang, toggleLang } = useLanguage();
+  const { user, logout } = useAuth();
 
   return (
     <>
@@ -223,14 +226,38 @@ function SideDrawer({ open, onClose, navLinks }: SideDrawerProps) {
               <Heart className="h-4 w-4" />
               {t("nav.wishlist")}
             </Link>
-            <Link
-              to="/account"
-              onClick={onClose}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-aurax-700 dark:text-aurax-200 hover:bg-aurax-100 dark:hover:bg-aurax-800 transition"
-            >
-              <User className="h-4 w-4" />
-              {t("nav.account")}
-            </Link>
+            {user ? (
+              <>
+                <Link
+                  to="/admin"
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-aurax-900 dark:text-white bg-aurax-100 dark:bg-aurax-800 hover:bg-aurax-200 dark:hover:bg-aurax-700 transition"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  {lang === "ar" ? "لوحة التحكم" : "Dashboard"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logout();
+                    onClose();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-red-500 hover:bg-red-500/10 transition"
+                >
+                  <LogOut className="h-4 w-4" />
+                  {lang === "ar" ? "تسجيل خروج" : "Logout"}
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                onClick={onClose}
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold text-aurax-900 dark:text-white bg-aurax-100 dark:bg-aurax-800 hover:bg-aurax-200 dark:hover:bg-aurax-700 transition"
+              >
+                <LogIn className="h-4 w-4" />
+                {lang === "ar" ? "تسجيل دخول" : "Login"}
+              </Link>
+            )}
           </div>
 
           <div className="my-6 border-t border-aurax-200 dark:border-aurax-800" />

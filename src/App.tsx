@@ -8,7 +8,6 @@ import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import CategoriesHub from "./pages/CategoriesHub";
 import CategoryAisle from "./pages/CategoryAisle";
-import About from "./pages/About";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -49,7 +48,6 @@ export default function App() {
           <Route path="/categories/:aisle" element={<CategoryAisle />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
-          <Route path="/about" element={<About />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
