@@ -11,6 +11,8 @@ import CategoryAisle from "./pages/CategoryAisle";
 import About from "./pages/About";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Admin from "./pages/Admin";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -49,6 +51,8 @@ export default function App() {
           <Route path="/cart" element={<Cart />} />
           <Route path="/about" element={<About />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

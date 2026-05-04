@@ -40,17 +40,37 @@ export interface ApiProduct {
   updatedAt: string;
 }
 
+function getToken(): string | null {
+  try {
+    return localStorage.getItem("aurax_token");
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_ENABLED) throw new Error("API not configured");
-  const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((init?.headers as Record<string, string>) || {}),
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { ...init, headers });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`API ${res.status}: ${text || res.statusText}`);
   }
+  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string | null;
+  role: string;
 }
 
 export const api = {
@@ -69,7 +89,36 @@ export const api = {
     return request<ApiProduct[]>(`/api/products${qs ? `?${qs}` : ""}`);
   },
   getProduct: (slug: string) => request<ApiProduct>(`/api/products/${slug}`),
+  createProduct: (body: Partial<ApiProduct>) =>
+    request<ApiProduct>("/api/products", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateProduct: (id: string, body: Partial<ApiProduct>) =>
+    request<ApiProduct>(`/api/products/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteProduct: (id: string) =>
+    request<void>(`/api/products/${id}`, { method: "DELETE" }),
+
   listCategories: () => request<ApiCategory[]>("/api/categories"),
+  createCategory: (body: Partial<ApiCategory>) =>
+    request<ApiCategory>("/api/categories", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  deleteCategory: (id: string) =>
+    request<void>(`/api/categories/${id}`, { method: "DELETE" }),
+
+  // Auth
+  login: (email: string, password: string) =>
+    request<{ token: string; user: AuthUser }>("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  me: () => request<AuthUser>("/api/auth/me"),
+
   createOrder: (body: {
     customerName: string;
     phone: string;
