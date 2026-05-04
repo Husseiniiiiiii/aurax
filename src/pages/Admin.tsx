@@ -334,57 +334,212 @@ function CategoriesTab({
         </button>
       </form>
 
-      <div className="space-y-2">
-        <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400">
-          الفئات الحالية
+      <div className="space-y-1">
+        <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400 mb-2">
+          الفئات الحالية ({categories.length})
         </h3>
-        {categories.map((c) => (
-          <div
-            key={c.id}
-            className="p-2.5 rounded-lg flex items-center gap-3 border border-aurax-700 bg-aurax-900/30"
-          >
-            {c.image ? (
-              <img
-                src={c.image}
-                alt={c.name}
-                className="h-12 w-12 rounded-md object-cover bg-aurax-800 shrink-0"
-              />
-            ) : (
-              <div className="h-12 w-12 rounded-md bg-aurax-800 grid place-items-center text-aurax-600 shrink-0">
-                <FolderTree className="h-5 w-5" />
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm truncate">{c.name}</div>
-              <div className="text-[11px] text-aurax-500 truncate">
-                {c.nameEn}
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => startEdit(c)}
-                className="h-8 w-8 grid place-items-center rounded-md text-aurax-300 border border-aurax-700 hover:border-white transition"
-                aria-label="تعديل"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => handleDelete(c.id)}
-                className="h-8 w-8 grid place-items-center rounded-md text-red-400 border border-red-500/30 hover:bg-red-500/10 transition"
-                aria-label="حذف"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        ))}
-        {categories.length === 0 && (
-          <div className="p-6 rounded-lg text-center text-aurax-500 text-sm border border-dashed border-aurax-700">
-            لا توجد فئات بعد
+        <ul className="divide-y divide-aurax-800 border border-aurax-700 rounded-lg bg-aurax-900/20">
+          {categories.map((c) => (
+            <CategoryRow
+              key={c.id}
+              category={c}
+              onEdit={() => startEdit(c)}
+              onDelete={() => handleDelete(c.id)}
+              onApplyUpload={async (file) => {
+                const { url } = await api.uploadImage(file);
+                await api.updateCategory(c.id, { image: url });
+                onChange();
+              }}
+              onRemoveImage={async () => {
+                await api.updateCategory(c.id, { image: null });
+                onChange();
+              }}
+            />
+          ))}
+          {categories.length === 0 && (
+            <li className="p-6 text-center text-aurax-500 text-sm">
+              لا توجد فئات بعد
+            </li>
+          )}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+function CategoryRow({
+  category,
+  onEdit,
+  onDelete,
+  onApplyUpload,
+  onRemoveImage,
+}: {
+  category: ApiCategory;
+  onEdit: () => void;
+  onDelete: () => void;
+  onApplyUpload: (file: File) => Promise<void>;
+  onRemoveImage: () => Promise<void>;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<{
+    file: File;
+    preview: string;
+  } | null>(null);
+  const pendingRef = useRef(pending);
+  pendingRef.current = pending;
+
+  useEffect(() => {
+    return () => {
+      const p = pendingRef.current;
+      if (p) URL.revokeObjectURL(p.preview);
+    };
+  }, []);
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (pending) URL.revokeObjectURL(pending.preview);
+    setPending({ file: f, preview: URL.createObjectURL(f) });
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const cancelPending = () => {
+    if (pending) URL.revokeObjectURL(pending.preview);
+    setPending(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const apply = async () => {
+    if (!pending) return;
+    setBusy(true);
+    try {
+      await onApplyUpload(pending.file);
+      URL.revokeObjectURL(pending.preview);
+      setPending(null);
+    } catch (e: any) {
+      alert(e.message || "فشل الرفع");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeImg = async () => {
+    setBusy(true);
+    try {
+      await onRemoveImage();
+    } catch (e: any) {
+      alert(e.message || "فشل");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const displaySrc = pending?.preview ?? category.image ?? null;
+
+  return (
+    <li className="flex flex-wrap items-center gap-2.5 p-3">
+      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full border border-aurax-700 bg-aurax-800">
+        {displaySrc ? (
+          <img
+            src={displaySrc}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-aurax-500">
+            <FolderTree className="h-5 w-5" />
           </div>
         )}
       </div>
-    </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="font-bold text-sm truncate text-aurax-100">
+          {category.name}
+        </div>
+        <div className="text-[11px] text-aurax-500 truncate" dir="ltr">
+          {category.slug} · {category.nameEn}
+        </div>
+      </div>
+
+      <label
+        className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-aurax-700 px-2.5 py-1.5 text-[11px] font-bold text-aurax-200 hover:border-white transition ${
+          busy ? "opacity-50 pointer-events-none" : ""
+        }`}
+      >
+        <ImagePlus className="h-3.5 w-3.5" />
+        {busy
+          ? "…"
+          : pending
+          ? "تغيير"
+          : category.image
+          ? "صورة جديدة"
+          : "اختيار صورة"}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onPick}
+          disabled={busy}
+        />
+      </label>
+
+      {pending && (
+        <>
+          <button
+            type="button"
+            onClick={apply}
+            disabled={busy}
+            className="shrink-0 inline-flex items-center gap-1 rounded-md bg-white text-aurax-900 px-2.5 py-1.5 text-[11px] font-extrabold disabled:opacity-60"
+          >
+            {busy ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <Check className="h-3 w-3" />
+            )}
+            تطبيق
+          </button>
+          <button
+            type="button"
+            onClick={cancelPending}
+            disabled={busy}
+            className="shrink-0 rounded-md border border-aurax-700 px-2 py-1.5 text-[11px] text-aurax-400 hover:text-white"
+          >
+            إلغاء
+          </button>
+        </>
+      )}
+
+      {category.image && !pending && (
+        <button
+          type="button"
+          onClick={removeImg}
+          disabled={busy}
+          aria-label="إزالة الصورة"
+          className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-aurax-700 text-aurax-400 hover:text-white transition"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label="تعديل"
+        className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-aurax-700 text-aurax-300 hover:border-white transition"
+      >
+        <Pencil className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={onDelete}
+        aria-label="حذف"
+        className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </button>
+    </li>
   );
 }
 
