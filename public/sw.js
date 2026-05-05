@@ -1,7 +1,7 @@
 // AURAX Service Worker — Cache + Web Push Notifications
 // Works even when the site/tab is fully closed!
 
-const CACHE_NAME = "aurax-v2";
+const CACHE_NAME = "aurax-v3";
 const STATIC_ASSETS = ["/", "/favicon.svg", "/manifest.json"];
 
 // ─── Install: cache static assets ───
@@ -39,7 +39,16 @@ self.addEventListener("fetch", (e) => {
         }
         return res;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() =>
+        caches.match(e.request).then((cached) => {
+          if (cached) return cached;
+          // SPA fallback: serve cached index.html for navigation requests
+          if (e.request.mode === "navigate") {
+            return caches.match("/");
+          }
+          return new Response("Offline", { status: 503, statusText: "Offline" });
+        })
+      )
   );
 });
 

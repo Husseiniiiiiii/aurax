@@ -50,14 +50,14 @@ export async function subscribeAdmin(): Promise<{
     // 4. Check if already subscribed
     const existing = await reg.pushManager.getSubscription();
     if (existing) {
-      // Re-send to backend in case server restarted
-      if (API_ENABLED) {
-        await api.subscribeToPush(existing.toJSON());
-      }
-      return { ok: true, status: "already", message: "الإشعارات مفعّلة بالفعل ✅" };
+      // Unsubscribe old subscription first to avoid VapidPkHashMismatch
+      // when VAPID keys have been regenerated on the server.
+      try {
+        await existing.unsubscribe();
+      } catch {}
     }
 
-    // 5. Subscribe with VAPID
+    // 5. Subscribe with current VAPID key (always fresh)
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
