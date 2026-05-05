@@ -53,6 +53,7 @@ export default function Navbar() {
       <header
         dir="ltr"
         className="sticky top-0 z-40 backdrop-blur-xl bg-white/70 dark:bg-aurax-900/70 border-b border-aurax-200/60 dark:border-aurax-800/60"
+        style={{ paddingTop: "var(--sat)" }}
       >
         <div className="container mx-auto px-4">
           <div className="h-16 flex items-center gap-3 md:gap-4 relative">
@@ -175,6 +176,7 @@ function SideDrawer({ open, onClose, navLinks }: SideDrawerProps) {
         className={`fixed inset-0 z-50 bg-black/60 backdrop-blur-md transition-opacity duration-300 ease-out ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
+        style={{ paddingTop: "var(--sat)" }}
       />
       <aside
         role="dialog"
@@ -184,6 +186,7 @@ function SideDrawer({ open, onClose, navLinks }: SideDrawerProps) {
         className={`fixed top-0 left-0 z-50 h-full w-full lg:hidden bg-aurax-900 shadow-2xl transition-opacity duration-200 ease-out flex flex-col ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
+        style={{ paddingTop: "var(--sat)" }}
       >
         <div className="flex items-center justify-between p-4 border-b border-aurax-200 dark:border-aurax-800">
           <Logo size="sm" />
