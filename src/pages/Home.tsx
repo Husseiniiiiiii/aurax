@@ -6,7 +6,7 @@ import { api, API_ENABLED, type ApiCategory } from "../lib/api";
 import { formatIqd } from "../utils/currency";
 
 export default function Home() {
-  const { t, lang } = useLanguage();
+  const { lang } = useLanguage();
   const { products, loading } = useProducts();
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [catsLoading, setCatsLoading] = useState(API_ENABLED);

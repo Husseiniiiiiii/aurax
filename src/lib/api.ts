@@ -157,7 +157,7 @@ export const api = {
       color?: string;
     }>;
   }) =>
-    request("/api/orders", {
+    request<{ id: string; [key: string]: unknown }>("/api/orders", {
       method: "POST",
       body: JSON.stringify(body),
     }),

@@ -1,4 +1,5 @@
-import { useEffect, useState, ReactNode } from "react";
+import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Clock, CheckCircle, Truck, PackageCheck, XCircle, Bell, Loader2, MapPin, Calendar, ClipboardList, ArrowLeft } from "lucide-react";
 import { api } from "../lib/api";
@@ -11,7 +12,7 @@ const statusConfig: Record<string, { color: string; label: string; icon: ReactNo
   cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "ملغي", icon: <XCircle className="w-3 h-3" /> },
 };
 
-export default function OrdersTab({ orders, onRefresh }: { orders: any[]; onRefresh: () => void }) {
+export default function OrdersTab({ orders }: { orders: any[]; onRefresh?: () => void }) {
   const [pushStatus, setPushStatus] = useState<"loading" | "subscribed" | "not-subscribed" | "unsupported">("loading");
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
