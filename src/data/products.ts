@@ -1,5 +1,6 @@
 export interface Product {
   id: string;
+  apiId?: string;
   name: string;
   nameEn: string;
   category: CategoryId;
@@ -15,6 +16,7 @@ export interface Product {
   sizes?: string[];
   inStock: boolean;
   featured?: boolean;
+  stock?: number;
 }
 
 export type CategoryId =
@@ -23,7 +25,8 @@ export type CategoryId =
   | "shoes"
   | "accessories"
   | "watches"
-  | "bags";
+  | "bags"
+  | (string & {}); // allow any dynamic slug from API
 
 export interface Category {
   id: CategoryId;

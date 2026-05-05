@@ -14,6 +14,7 @@ import {
   Loader2,
   LogOut,
   Package,
+  PackageCheck,
   ChevronLeft,
   ChevronRight,
   Pencil,
@@ -29,6 +30,7 @@ import PendingImages, {
   type ImageItem,
 } from "../components/PendingImages";
 import { api, type ApiCategory, type ApiProduct } from "../lib/api";
+import OrdersTab from "./OrdersTab";
 
 // ─────────── shared UI ───────────
 
@@ -72,9 +74,10 @@ function slugify(s: string) {
 
 export default function Admin() {
   const { user, loading: authLoading, logout } = useAuth();
-  const [tab, setTab] = useState<"products" | "categories">("products");
+  const [tab, setTab] = useState<"products" | "categories" | "orders">("products");
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productsView, setProductsView] = useState<"list" | "form">("list");
@@ -84,12 +87,14 @@ export default function Admin() {
     setLoading(true);
     setError(null);
     try {
-      const [p, c] = await Promise.all([
+      const [p, c, o] = await Promise.all([
         api.listProducts(),
         api.listCategories(),
+        api.listOrders(),
       ]);
       setProducts(p);
       setCategories(c);
+      setOrders(o);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -101,13 +106,7 @@ export default function Admin() {
     if (user) refresh();
   }, [user]);
 
-  if (authLoading) {
-    return (
-      <main className="container mx-auto px-4 py-20 text-center">
-        <Loader2 className="h-6 w-6 animate-spin mx-auto text-aurax-500" />
-      </main>
-    );
-  }
+  if (authLoading) return <AdminSkeleton />;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
@@ -129,7 +128,7 @@ export default function Admin() {
       )}
 
       {/* Top tabs */}
-      <div className={`grid grid-cols-2 gap-2 mb-5 ${chromeHidden ? "hidden" : ""}`}>
+      <div className={`grid grid-cols-3 gap-2 mb-5 ${chromeHidden ? "hidden" : ""}`}>
         {[
           {
             id: "products" as const,
@@ -143,20 +142,43 @@ export default function Admin() {
             count: categories.length,
             Icon: FolderTree,
           },
-        ].map(({ id, label, count, Icon }) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            className={`px-3 py-2.5 rounded-lg text-sm font-extrabold inline-flex items-center justify-center gap-2 border transition ${
-              tab === id
-                ? "border-white text-white bg-white/5"
-                : "border-aurax-700 text-aurax-400 hover:text-aurax-200"
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label} ({count})
-          </button>
-        ))}
+          {
+            id: "orders" as const,
+            label: "الطلبات",
+            count: orders.length,
+            Icon: PackageCheck,
+          },
+        ].map(({ id, label, count, Icon }) => {
+          const active = tab === id;
+          const showShimmer = loading && count === 0;
+          return (
+            <button
+              key={id}
+              onClick={() => setTab(id)}
+              className={`px-3 py-2.5 rounded-lg text-sm font-extrabold inline-flex items-center justify-center gap-2 border transition ${
+                active
+                  ? "border-white text-white bg-white/5"
+                  : "border-aurax-700 text-aurax-400 hover:text-aurax-200"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{label}</span>
+              <span
+                className={`min-w-[1.5rem] h-5 px-1.5 rounded-full inline-flex items-center justify-center text-[11px] font-black tabular-nums border ${
+                  active
+                    ? "bg-white text-aurax-900 border-white"
+                    : "bg-aurax-800/60 text-aurax-200 border-aurax-700"
+                }`}
+              >
+                {showShimmer ? (
+                  <span className="block h-2 w-3 rounded bg-aurax-200/60 dark:bg-aurax-700/70 overflow-hidden shimmer" />
+                ) : (
+                  count
+                )}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {error && (
@@ -165,34 +187,26 @@ export default function Admin() {
         </div>
       )}
 
-      {loading && !chromeHidden && (
-        <div className="space-y-2 mb-4">
-          {[0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="p-2.5 rounded-lg flex items-center gap-3 border border-aurax-700 bg-aurax-900/30"
-            >
-              <div className="h-12 w-12 rounded-md bg-aurax-800 overflow-hidden shimmer shrink-0" />
-              <div className="flex-1 space-y-1.5">
-                <div className="h-3 w-2/3 rounded bg-aurax-800 overflow-hidden shimmer" />
-                <div className="h-2.5 w-1/3 rounded bg-aurax-800 overflow-hidden shimmer" />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {tab === "categories" && (
-        <CategoriesTab categories={categories} onChange={refresh} />
-      )}
-      {tab === "products" && (
-        <ProductsTab
-          products={products}
-          categories={categories}
-          onChange={refresh}
-          view={productsView}
-          onViewChange={setProductsView}
-        />
+      {loading && !chromeHidden ? (
+        <TabContentSkeleton tab={tab} />
+      ) : (
+        <>
+          {tab === "categories" && (
+            <CategoriesTab categories={categories} onChange={refresh} />
+          )}
+          {tab === "products" && (
+            <ProductsTab
+              products={products}
+              categories={categories}
+              onChange={refresh}
+              view={productsView}
+              onViewChange={setProductsView}
+            />
+          )}
+          {tab === "orders" && (
+            <OrdersTab orders={orders} onRefresh={refresh} />
+          )}
+        </>
       )}
 
       {!chromeHidden && (
@@ -203,6 +217,102 @@ export default function Admin() {
         </div>
       )}
     </main>
+  );
+}
+
+// ─────────── Skeletons ───────────
+
+const skelBase =
+  "bg-aurax-200/60 dark:bg-aurax-800/70 overflow-hidden shimmer rounded-md";
+
+function AdminSkeleton() {
+  return (
+    <main className="container mx-auto px-4 py-6 md:py-10 pb-24 max-w-5xl">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="space-y-2">
+          <div className={`h-7 w-40 ${skelBase}`} />
+          <div className={`h-3 w-28 ${skelBase}`} />
+        </div>
+        <div className={`h-9 w-20 ${skelBase}`} />
+      </div>
+
+      {/* Tabs */}
+      <div className="grid grid-cols-3 gap-2 mb-5">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={`h-10 ${skelBase}`} />
+        ))}
+      </div>
+
+      <TabContentSkeleton tab="products" />
+    </main>
+  );
+}
+
+function TabContentSkeleton({ tab }: { tab: "products" | "categories" | "orders" }) {
+  if (tab === "products") {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="p-3 rounded-xl flex items-center gap-3 border border-aurax-700"
+          >
+            <div className={`h-14 w-14 shrink-0 ${skelBase}`} />
+            <div className="flex-1 space-y-2">
+              <div className={`h-3.5 w-2/3 ${skelBase}`} />
+              <div className={`h-3 w-1/3 ${skelBase}`} />
+            </div>
+            <div className={`h-8 w-16 ${skelBase}`} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (tab === "categories") {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-xl border border-aurax-700 p-3 space-y-3"
+          >
+            <div className={`aspect-square w-full ${skelBase}`} />
+            <div className={`h-3.5 w-2/3 ${skelBase}`} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // orders
+  return (
+    <div className="space-y-5">
+      <div className={`h-24 w-full rounded-xl ${skelBase}`} />
+      <div className="space-y-2">
+        <div className={`h-3 w-32 ${skelBase}`} />
+        <div className="flex gap-2 overflow-hidden">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className={`h-9 w-20 shrink-0 ${skelBase}`} />
+          ))}
+        </div>
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="p-4 rounded-xl border border-aurax-700 flex items-center gap-4"
+          >
+            <div className="flex-1 space-y-2">
+              <div className={`h-4 w-1/3 ${skelBase}`} />
+              <div className={`h-3 w-1/2 ${skelBase}`} />
+            </div>
+            <div className={`h-7 w-24 rounded-full ${skelBase}`} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

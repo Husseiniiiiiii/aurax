@@ -1,57 +1,99 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { categories } from "../data/products";
-import GenderCircleLink from "../components/GenderCircleLink";
 import { useLanguage } from "../context/LanguageContext";
 import { useProducts } from "../hooks/useProducts";
+import { api, API_ENABLED, type ApiCategory } from "../lib/api";
 import { formatIqd } from "../utils/currency";
+
+/* ——— static placeholder images for the two gender circles ——— */
+const WOMEN_IMG =
+  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=600&fit=crop&q=80";
+const MEN_IMG =
+  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop&q=80";
 
 export default function Home() {
   const { t, lang } = useLanguage();
-  const women = categories.find((c) => c.id === "women")!;
-  const men = categories.find((c) => c.id === "men")!;
   const { products, loading } = useProducts();
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [catsLoading, setCatsLoading] = useState(API_ENABLED);
 
+  useEffect(() => {
+    if (!API_ENABLED) return;
+    api
+      .listCategories()
+      .then(setCategories)
+      .catch(() => {})
+      .finally(() => setCatsLoading(false));
+  }, []);
+
+  // Only show products explicitly marked as featured — never auto-fill.
   const featured = useMemo(() => {
-    const flagged = products.filter((p: any) => p.featured);
-    return (flagged.length ? flagged : products).slice(0, 8);
+    return products.filter((p: any) => p.featured).slice(0, 8);
   }, [products]);
+
+  /* Find the main "homepage section" categories (gender = "men" / "women") */
+  const homeSections = categories.filter(
+    (c) => c.gender === "men" || c.gender === "women"
+  );
+  const womenSection = homeSections.find((c) => c.gender === "women");
+  const menSection = homeSections.find((c) => c.gender === "men");
+  const womenImage = womenSection?.image || WOMEN_IMG;
+  const menImage = menSection?.image || MEN_IMG;
 
   return (
     <main
       className="overflow-x-hidden pt-8 md:pt-10 pb-12 md:pb-16"
       dir={lang === "ar" ? "rtl" : "ltr"}
     >
+      {/* ——— Brand name ——— */}
       <header className="container mx-auto px-4 text-center mt-8 md:mt-12">
         <h1
           className="silver-text font-normal tracking-[0.15em] leading-none brand-shine inline-block"
           style={{ fontSize: "clamp(2.75rem, 12vw, 6rem)" }}
         >
-          AURAX
+          Aura-x
         </h1>
       </header>
 
-      <section className="container mx-auto px-4 mt-16 md:mt-20">
-        <div
-          className={`flex flex-row flex-nowrap items-center justify-center gap-6 sm:gap-10 md:gap-16 max-w-3xl mx-auto w-full ${
-            lang === "ar" ? "flex-row-reverse" : ""
-          }`}
-        >
-          <GenderCircleLink
-            to="/categories/women"
-            image={women.image}
-            label={t("categories.sectionWomen")}
-            ariaLabel={t("categories.sectionWomen")}
-          />
-          <GenderCircleLink
-            to="/categories/men"
-            image={men.image}
-            label={t("categories.sectionMen")}
-            ariaLabel={t("categories.sectionMen")}
-          />
-        </div>
-      </section>
+      {/* ——— Gender section circles (shimmer while loading) ——— */}
+      {catsLoading ? (
+        <section className="container mx-auto px-4 mt-12 md:mt-16">
+          <div className="flex justify-center items-start gap-8 sm:gap-12 md:gap-20">
+            {[0, 1].map((i) => (
+              <div key={i} className="flex flex-col items-center gap-4 w-full max-w-[200px] sm:max-w-[240px]">
+                <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full bg-aurax-200 dark:bg-aurax-800 overflow-hidden shimmer ring-[3px] ring-aurax-300/40 dark:ring-aurax-700/40 ring-offset-4 ring-offset-aurax-50 dark:ring-offset-aurax-900" />
+                <div className="h-4 w-20 sm:w-24 rounded-full bg-aurax-200 dark:bg-aurax-800 overflow-hidden shimmer" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : homeSections.length > 0 ? (
+        <section className="container mx-auto px-4 mt-12 md:mt-16">
+          <div className="flex justify-center items-start gap-8 sm:gap-12 md:gap-20">
+            {homeSections.map((section) => (
+              <Link
+                key={section.id}
+                to={`/categories/${section.gender}`}
+                className="group flex flex-col items-center gap-4 w-full max-w-[200px] sm:max-w-[240px]"
+              >
+                <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full overflow-hidden ring-[3px] ring-aurax-300/80 dark:ring-aurax-600/70 shadow-glow ring-offset-4 ring-offset-aurax-50 dark:ring-offset-aurax-900 transition-all duration-500 group-hover:ring-aurax-500 dark:group-hover:ring-aurax-400 group-hover:scale-[1.04]">
+                  <img
+                    src={section.image || (section.gender === "women" ? WOMEN_IMG : MEN_IMG)}
+                    alt=""
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-aurax-900/70 via-transparent to-transparent" />
+                </div>
+                <span className="text-center font-extrabold tracking-wide text-sm sm:text-base md:text-lg">
+                  {lang === "ar" ? section.name : section.nameEn}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
+      {/* ——— Featured carousel ——— */}
       <section className="container mx-auto px-4 mt-12 md:mt-16">
         {loading && featured.length === 0 ? (
           <CarouselSkeleton />

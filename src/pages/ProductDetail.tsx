@@ -14,6 +14,7 @@ import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext";
 import { formatIqd } from "../utils/currency";
 import { useProducts } from "../hooks/useProducts";
+import { useWishlist } from "../context/WishlistContext";
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -25,6 +26,7 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { t, lang } = useLanguage();
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const Arrow = lang === "ar" ? ArrowLeft : ArrowRight;
 
   const [quantity, setQuantity] = useState(1);
@@ -116,7 +118,8 @@ export default function ProductDetail() {
           </h1>
           <p className="mt-1 text-aurax-500">{subName}</p>
 
-          <div className="mt-5 flex items-baseline gap-3 flex-wrap">
+          {/* Price + Stock */}
+          <div className="mt-5 flex items-center gap-3 flex-wrap">
             <span
               className="text-3xl font-black silver-text whitespace-nowrap"
               dir="ltr"
@@ -143,11 +146,18 @@ export default function ProductDetail() {
             )}
           </div>
 
-          <div className="mt-4">
+          {/* Stock badge */}
+          <div className="mt-3">
             {product.inStock ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-extrabold px-2.5 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                {lang === "ar" ? "متوفر" : "In stock"}
+                {product.stock != null && product.stock > 0
+                  ? lang === "ar"
+                    ? `متبقي ${product.stock} قطعة`
+                    : `${product.stock} left in stock`
+                  : lang === "ar"
+                  ? "متوفر"
+                  : "In stock"}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-extrabold px-2.5 py-1">
@@ -156,12 +166,6 @@ export default function ProductDetail() {
               </span>
             )}
           </div>
-
-          {product.description && (
-            <p className="mt-6 text-aurax-600 dark:text-aurax-300 leading-relaxed">
-              {product.description}
-            </p>
-          )}
 
           {product.colors && product.colors.length > 0 && (
             <div className="mt-6">
@@ -211,7 +215,7 @@ export default function ProductDetail() {
                 onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                 className="h-11 w-11 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 rounded-r-xl"
               >
-                <Minus className="h-4 w-4" />
+              <Minus className="h-4 w-4" />
               </button>
               <span className="w-12 text-center font-extrabold">
                 {quantity}
@@ -220,7 +224,7 @@ export default function ProductDetail() {
                 onClick={() => setQuantity((q) => q + 1)}
                 className="h-11 w-11 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 rounded-l-xl"
               >
-                <Plus className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               </button>
             </div>
             <span className="text-sm text-aurax-500">
@@ -228,6 +232,7 @@ export default function ProductDetail() {
             </span>
           </div>
 
+          {/* Action buttons */}
           <div className="mt-6 flex flex-wrap gap-3">
             <button
               onClick={handleAddToCart}
@@ -245,10 +250,26 @@ export default function ProductDetail() {
               {t("common.buyNow")}
               <Arrow className="h-4 w-4" />
             </button>
-            <button aria-label={t("nav.wishlist")} className="btn-outline px-4">
-              <Heart className="h-4 w-4" />
+            <button
+              onClick={() => toggleWishlist(product)}
+              aria-label={t("nav.wishlist")}
+              className={`btn-outline px-4 ${isInWishlist(product.id) ? "text-red-500 border-red-500/50" : ""}`}
+            >
+              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
             </button>
           </div>
+
+          {/* Description — below action buttons */}
+          {product.description && (
+            <div className="mt-8 pt-6 border-t border-aurax-200/70 dark:border-aurax-800/90">
+              <h4 className="text-sm font-bold mb-2">
+                {lang === "ar" ? "الوصف" : "Description"}
+              </h4>
+              <p className="text-aurax-600 dark:text-aurax-300 leading-relaxed">
+                {product.description}
+              </p>
+            </div>
+          )}
 
         </div>
       </div>

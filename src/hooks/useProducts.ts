@@ -8,20 +8,12 @@ import {
 
 // Map API product to the frontend Product shape (fills missing fields with defaults).
 function mapApiProduct(p: ApiProduct): Product {
-  const allowedCats: CategoryId[] = [
-    "men",
-    "women",
-    "shoes",
-    "accessories",
-    "watches",
-    "bags",
-  ];
-  const slug = p.category?.slug as CategoryId | undefined;
-  const category: CategoryId =
-    slug && allowedCats.includes(slug) ? slug : "accessories";
+  // Use the actual category slug from the API — no hardcoded allowlist.
+  const category: CategoryId = (p.category?.slug as CategoryId) || "uncategorized";
 
   return {
     id: p.slug || p.id,
+    apiId: p.id,
     name: p.name,
     nameEn: p.nameEn,
     category,
@@ -37,6 +29,7 @@ function mapApiProduct(p: ApiProduct): Product {
     sizes: p.sizes,
     inStock: p.inStock,
     featured: p.featured,
+    stock: p.stock ?? undefined,
   };
 }
 

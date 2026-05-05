@@ -13,6 +13,7 @@ export interface ApiCategory {
   name: string;
   nameEn: string;
   image: string | null;
+  gender: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -36,6 +37,7 @@ export interface ApiProduct {
   gender: string | null;
   categoryId: string;
   category?: ApiCategory;
+  stock?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,4 +161,32 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+
+  listOrders: () => request<any[]>("/api/orders"),
+
+  getOrder: (id: string) => request<any>(`/api/orders/${id}`),
+
+  updateOrderStatus: (id: string, status: string) =>
+    request(`/api/orders/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+
+  subscribeToPush: (subscription: PushSubscriptionJSON) =>
+    request("/api/push/subscribe", {
+      method: "POST",
+      body: JSON.stringify(subscription),
+    }),
+
+  unsubscribeFromPush: (endpoint: string) =>
+    request("/api/push/unsubscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint }),
+    }),
+
+  sendTestPush: () =>
+    request<{ ok: boolean; sent: number; removedDead: number }>(
+      "/api/push/test",
+      { method: "POST" }
+    ),
 };

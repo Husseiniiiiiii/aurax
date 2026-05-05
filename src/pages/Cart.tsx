@@ -141,9 +141,9 @@ export default function Cart() {
             </div>
           </div>
 
-          <button className="btn-primary w-full mt-6">
+          <Link to="/checkout" className="btn-primary w-full mt-6 text-center">
             {t("cart.checkout")}
-          </button>
+          </Link>
           <Link
             to="/shop"
             className="block text-center mt-3 text-sm font-bold text-aurax-500 hover:text-aurax-900 dark:hover:text-white"

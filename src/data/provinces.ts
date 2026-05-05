@@ -1,0 +1,21 @@
+// Iraqi provinces (18 governorates)
+export const IRAQ_PROVINCES = [
+  { id: "baghdad", ar: "بغداد", en: "Baghdad" },
+  { id: "basra", ar: "البصرة", en: "Basra" },
+  { id: "nineveh", ar: "نينوى", en: "Nineveh" },
+  { id: "erbil", ar: "أربيل", en: "Erbil" },
+  { id: "sulaymaniyah", ar: "السليمانية", en: "Sulaymaniyah" },
+  { id: "duhok", ar: "دهوك", en: "Duhok" },
+  { id: "kirkuk", ar: "كركوك", en: "Kirkuk" },
+  { id: "diyala", ar: "ديالى", en: "Diyala" },
+  { id: "anbar", ar: "الأنبار", en: "Anbar" },
+  { id: "babel", ar: "بابل", en: "Babel" },
+  { id: "karbala", ar: "كربلاء", en: "Karbala" },
+  { id: "najaf", ar: "النجف", en: "Najaf" },
+  { id: "wasit", ar: "واسط", en: "Wasit" },
+  { id: "maysan", ar: "ميسان", en: "Maysan" },
+  { id: "dhiqar", ar: "ذي قار", en: "Dhi Qar" },
+  { id: "muthanna", ar: "المثنى", en: "Muthanna" },
+  { id: "qadisiyyah", ar: "القادسية", en: "Qadisiyyah" },
+  { id: "saladin", ar: "صلاح الدين", en: "Saladin" },
+] as const;

@@ -9,9 +9,12 @@ import Cart from "./pages/Cart";
 import CategoriesHub from "./pages/CategoriesHub";
 import CategoryAisle from "./pages/CategoryAisle";
 import SearchPage from "./pages/SearchPage";
+import Checkout from "./pages/Checkout";
+import TrackOrder from "./pages/TrackOrder";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import AdminOrderDetail from "./pages/AdminOrderDetail";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -48,9 +51,12 @@ export default function App() {
           <Route path="/categories/:aisle" element={<CategoryAisle />} />
           <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/track" element={<TrackOrder />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

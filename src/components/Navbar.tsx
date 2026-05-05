@@ -15,12 +15,14 @@ import {
 } from "lucide-react";
 import Logo from "./Logo";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
 import { useLanguage } from "../context/LanguageContext";
 import { useAuth } from "../context/AuthContext";
 
 export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { totalItems } = useCart();
+  const { count: wishlistCount } = useWishlist();
   const { t, lang, toggleLang } = useLanguage();
   const location = useLocation();
 
@@ -28,6 +30,7 @@ export default function Navbar() {
     { to: "/", label: t("nav.home") },
     { to: "/shop", label: t("nav.shop") },
     { to: "/categories", label: t("nav.categories") },
+    { to: "/track", label: lang === "ar" ? "تتبع طلبي" : "Track Order" },
   ];
 
   useEffect(() => {
@@ -120,9 +123,14 @@ export default function Navbar() {
               <Link
                 to="/wishlist"
                 aria-label={t("nav.wishlist")}
-                className="hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-aurax-200 dark:border-aurax-700 bg-white/70 dark:bg-aurax-800/60 hover:bg-aurax-100 dark:hover:bg-aurax-700 transition"
+                className="hidden sm:grid h-10 w-10 place-items-center rounded-xl border border-aurax-200 dark:border-aurax-700 bg-white/70 dark:bg-aurax-800/60 hover:bg-aurax-100 dark:hover:bg-aurax-700 transition relative"
               >
                 <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 h-5 min-w-[20px] px-1 grid place-items-center rounded-full bg-red-500 text-white text-[10px] font-extrabold ring-2 ring-white dark:ring-aurax-900">
+                    {wishlistCount}
+                  </span>
+                )}
               </Link>
 
               <button

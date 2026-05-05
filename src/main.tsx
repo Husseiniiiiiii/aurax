@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ThemeProvider } from "./context/ThemeContext";
 import { CartProvider } from "./context/CartContext";
+import { WishlistProvider } from "./context/WishlistContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
@@ -14,9 +15,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       <ThemeProvider>
         <AuthProvider>
           <CartProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
+            <WishlistProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </WishlistProvider>
           </CartProvider>
         </AuthProvider>
       </ThemeProvider>
