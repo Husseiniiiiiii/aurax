@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, API_ENABLED, type ApiProduct } from "../lib/api";
-import {
-  products as staticProducts,
-  type Product,
-  type CategoryId,
-} from "../data/products";
+import type { Product, CategoryId } from "../data/products";
 
 // Map API product to the frontend Product shape (fills missing fields with defaults).
 function mapApiProduct(p: ApiProduct): Product {
@@ -37,7 +33,7 @@ interface UseProductsState {
   products: Product[];
   loading: boolean;
   error: string | null;
-  source: "api" | "static";
+  source: "api" | "empty";
 }
 
 export function useProducts(): UseProductsState {
@@ -45,17 +41,12 @@ export function useProducts(): UseProductsState {
     products: [],
     loading: API_ENABLED,
     error: null,
-    source: "static",
+    source: "empty",
   });
 
   useEffect(() => {
     if (!API_ENABLED) {
-      setState({
-        products: staticProducts,
-        loading: false,
-        error: null,
-        source: "static",
-      });
+      setState({ products: [], loading: false, error: null, source: "empty" });
       return;
     }
 
@@ -66,33 +57,21 @@ export function useProducts(): UseProductsState {
       .listProducts()
       .then((items) => {
         if (cancelled) return;
-        const mapped = items.map(mapApiProduct);
-        // Fallback to static if API returns empty
-        if (mapped.length === 0) {
-          setState({
-            products: staticProducts,
-            loading: false,
-            error: null,
-            source: "static",
-          });
-        } else {
-          setState({
-            products: mapped,
-            loading: false,
-            error: null,
-            source: "api",
-          });
-        }
+        setState({
+          products: items.map(mapApiProduct),
+          loading: false,
+          error: null,
+          source: "api",
+        });
       })
       .catch((err) => {
         if (cancelled) return;
-        // On API error, fallback to static data so site stays usable.
-        console.error("API error, using static data:", err);
+        console.error("API error loading products:", err);
         setState({
-          products: staticProducts,
+          products: [],
           loading: false,
           error: String(err.message || err),
-          source: "static",
+          source: "empty",
         });
       });
 

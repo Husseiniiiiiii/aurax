@@ -78,7 +78,8 @@ export default function Admin() {
   const [products, setProducts] = useState<ApiProduct[]>([]);
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [productsView, setProductsView] = useState<"list" | "form">("list");
   const chromeHidden = tab === "products" && productsView === "form";
@@ -99,6 +100,7 @@ export default function Admin() {
       setError(e.message);
     } finally {
       setLoading(false);
+      setHasLoadedOnce(true);
     }
   }
 
@@ -106,7 +108,8 @@ export default function Admin() {
     if (user) refresh();
   }, [user]);
 
-  if (authLoading) return <AdminSkeleton />;
+  // One unified skeleton for the whole first-load (auth + initial data fetch).
+  if (authLoading || (!hasLoadedOnce && loading)) return <AdminSkeleton />;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
@@ -187,26 +190,20 @@ export default function Admin() {
         </div>
       )}
 
-      {loading && !chromeHidden ? (
-        <TabContentSkeleton tab={tab} />
-      ) : (
-        <>
-          {tab === "categories" && (
-            <CategoriesTab categories={categories} onChange={refresh} />
-          )}
-          {tab === "products" && (
-            <ProductsTab
-              products={products}
-              categories={categories}
-              onChange={refresh}
-              view={productsView}
-              onViewChange={setProductsView}
-            />
-          )}
-          {tab === "orders" && (
-            <OrdersTab orders={orders} onRefresh={refresh} />
-          )}
-        </>
+      {tab === "categories" && (
+        <CategoriesTab categories={categories} onChange={refresh} />
+      )}
+      {tab === "products" && (
+        <ProductsTab
+          products={products}
+          categories={categories}
+          onChange={refresh}
+          view={productsView}
+          onViewChange={setProductsView}
+        />
+      )}
+      {tab === "orders" && (
+        <OrdersTab orders={orders} onRefresh={refresh} />
       )}
 
       {!chromeHidden && (

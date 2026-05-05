@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search } from "lucide-react";
-import { products as allProducts, categories } from "../data/products";
 import type { CategoryId } from "../data/products";
 import ProductCard from "../components/ProductCard";
 import { useLanguage } from "../context/LanguageContext";
+import { useProducts } from "../hooks/useProducts";
+import { api, API_ENABLED, type ApiCategory } from "../lib/api";
 
 type SortKey = "featured" | "price-asc" | "price-desc" | "rating";
 
@@ -25,9 +26,17 @@ export default function SearchPage() {
   const [sort, setSort]       = useState<SortKey>("featured");
   const [cat, setCat]         = useState<CategoryId | null>(null);
 
+  const { products: allProducts } = useProducts();
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+
   const inputRef   = useRef<HTMLInputElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  useEffect(() => {
+    if (!API_ENABLED) return;
+    api.listCategories().then(setCategories).catch(() => {});
+  }, []);
 
   const results = (() => {
     let list = [...allProducts];
@@ -91,7 +100,7 @@ export default function SearchPage() {
         >
           <option value="">{isRtl ? "الكل" : "All"}</option>
           {categories.map((c) => (
-            <option key={c.id} value={c.id}>
+            <option key={c.id} value={c.slug}>
               {isRtl ? c.name : c.nameEn}
             </option>
           ))}

@@ -5,12 +5,6 @@ import { useProducts } from "../hooks/useProducts";
 import { api, API_ENABLED, type ApiCategory } from "../lib/api";
 import { formatIqd } from "../utils/currency";
 
-/* ——— static placeholder images for the two gender circles ——— */
-const WOMEN_IMG =
-  "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600&h=600&fit=crop&q=80";
-const MEN_IMG =
-  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=600&h=600&fit=crop&q=80";
-
 export default function Home() {
   const { t, lang } = useLanguage();
   const { products, loading } = useProducts();
@@ -35,10 +29,6 @@ export default function Home() {
   const homeSections = categories.filter(
     (c) => c.gender === "men" || c.gender === "women"
   );
-  const womenSection = homeSections.find((c) => c.gender === "women");
-  const menSection = homeSections.find((c) => c.gender === "men");
-  const womenImage = womenSection?.image || WOMEN_IMG;
-  const menImage = menSection?.image || MEN_IMG;
 
   return (
     <main
@@ -77,11 +67,19 @@ export default function Home() {
                 className="group flex flex-col items-center gap-4 w-full max-w-[200px] sm:max-w-[240px]"
               >
                 <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 rounded-full overflow-hidden ring-[3px] ring-aurax-300/80 dark:ring-aurax-600/70 shadow-glow ring-offset-4 ring-offset-aurax-50 dark:ring-offset-aurax-900 transition-all duration-500 group-hover:ring-aurax-500 dark:group-hover:ring-aurax-400 group-hover:scale-[1.04]">
-                  <img
-                    src={section.image || (section.gender === "women" ? WOMEN_IMG : MEN_IMG)}
-                    alt=""
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+                  {section.image ? (
+                    <img
+                      src={section.image}
+                      alt=""
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-aurax-200 dark:bg-aurax-800 flex items-center justify-center">
+                      <span className="text-5xl opacity-30">
+                        {section.gender === "women" ? "👗" : "👔"}
+                      </span>
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-aurax-900/70 via-transparent to-transparent" />
                 </div>
                 <span className="text-center font-extrabold tracking-wide text-sm sm:text-base md:text-lg">
