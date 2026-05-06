@@ -101,7 +101,7 @@ export default function Cart() {
                         updateQuantity(item.product.id, item.quantity + 1);
                       }
                     }}
-                    disabled={item.product.stock && item.quantity >= Math.min(10, item.product.stock)}
+                    disabled={!!item.product.stock && item.quantity >= Math.min(10, item.product.stock)}
                     className="h-8 w-8 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-3.5 w-3.5" />

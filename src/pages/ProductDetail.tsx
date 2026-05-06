@@ -272,7 +272,7 @@ export default function ProductDetail() {
                   const maxStock = product.stock ? Math.min(10, product.stock) : 10;
                   return q < maxStock ? q + 1 : q;
                 })}
-                disabled={product.stock && quantity >= Math.min(10, product.stock)}
+                disabled={!!product.stock && quantity >= Math.min(10, product.stock)}
                 className="h-11 w-11 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 rounded-l-xl disabled:opacity-30 disabled:cursor-not-allowed"
               >
               <Plus className="h-4 w-4" />
