@@ -329,8 +329,19 @@ function CategoriesTab({
   const [images, setImages] = useState<ImageItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [categoryTab, setCategoryTab] = useState<"all" | "men-sub" | "women-sub">("all");
 
   const slug = useMemo(() => slugify(nameEn || name), [nameEn, name]);
+
+  // Filter categories by tab
+  const filteredCategories = useMemo(() => {
+    if (categoryTab === "all") return categories;
+    return categories.filter((c) => c.gender === categoryTab);
+  }, [categories, categoryTab]);
+
+  // Count categories by gender
+  const menCount = categories.filter((c) => c.gender === "men-sub").length;
+  const womenCount = categories.filter((c) => c.gender === "women-sub").length;
 
   function resetForm() {
     setEditing(null);
@@ -380,6 +391,12 @@ function CategoriesTab({
   }
 
   async function handleDelete(id: string) {
+    const category = categories.find((c) => c.id === id);
+    // Prevent deletion of main gender sections (men/women)
+    if (category && (category.gender === "men" || category.gender === "women")) {
+      alert("لا يمكن حذف القسم الرئيسي (رجالي/نسائي)");
+      return;
+    }
     if (!confirm("حذف هذه الفئة وكل منتجاتها؟")) return;
     try {
       await api.deleteCategory(id);
@@ -479,12 +496,46 @@ function CategoriesTab({
         </button>
       </form>
 
+      {/* Category Tabs */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setCategoryTab("all")}
+          className={`px-3 py-2 rounded-lg text-xs font-extrabold border transition ${
+            categoryTab === "all"
+              ? "border-white text-white bg-white/5"
+              : "border-aurax-700 text-aurax-400 hover:text-aurax-200"
+          }`}
+        >
+          الكل ({categories.length})
+        </button>
+        <button
+          onClick={() => setCategoryTab("men-sub")}
+          className={`px-3 py-2 rounded-lg text-xs font-extrabold border transition ${
+            categoryTab === "men-sub"
+              ? "border-white text-white bg-white/5"
+              : "border-aurax-700 text-aurax-400 hover:text-aurax-200"
+          }`}
+        >
+          👔 رجالي ({menCount})
+        </button>
+        <button
+          onClick={() => setCategoryTab("women-sub")}
+          className={`px-3 py-2 rounded-lg text-xs font-extrabold border transition ${
+            categoryTab === "women-sub"
+              ? "border-white text-white bg-white/5"
+              : "border-aurax-700 text-aurax-400 hover:text-aurax-200"
+          }`}
+        >
+          👗 نسائي ({womenCount})
+        </button>
+      </div>
+
       <div className="space-y-1">
         <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400 mb-2">
-          الفئات الحالية ({categories.length})
+          الفئات الحالية ({filteredCategories.length})
         </h3>
         <ul className="divide-y divide-aurax-800 border border-aurax-700 rounded-lg bg-aurax-900/20">
-          {categories.map((c) => (
+          {filteredCategories.map((c) => (
             <CategoryRow
               key={c.id}
               category={c}
@@ -501,9 +552,9 @@ function CategoriesTab({
               }}
             />
           ))}
-          {categories.length === 0 && (
+          {filteredCategories.length === 0 && (
             <li className="p-6 text-center text-aurax-500 text-sm">
-              لا توجد فئات بعد
+              لا توجد فئات في هذا القسم
             </li>
           )}
         </ul>
@@ -687,14 +738,16 @@ function CategoryRow({
       >
         <Pencil className="h-3.5 w-3.5" />
       </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        aria-label="حذف"
-        className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      {category.gender !== "men" && category.gender !== "women" && (
+        <button
+          type="button"
+          onClick={onDelete}
+          aria-label="حذف"
+          className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
     </li>
   );
 }

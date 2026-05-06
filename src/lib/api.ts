@@ -172,6 +172,12 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
 
+  deleteOrder: (id: string) =>
+    request<void>(`/api/orders/${id}`, { method: "DELETE" }),
+
+  deleteAllOrders: () =>
+    request<void>("/api/orders", { method: "DELETE" }),
+
   subscribeToPush: (subscription: PushSubscriptionJSON) =>
     request("/api/push/subscribe", {
       method: "POST",

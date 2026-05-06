@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Clock, CheckCircle, Truck, PackageCheck, XCircle, Bell, Loader2, MapPin, Calendar, ClipboardList, ArrowLeft } from "lucide-react";
+import { Clock, CheckCircle, Truck, PackageCheck, XCircle, Bell, Loader2, MapPin, Calendar, ClipboardList, ArrowLeft, Trash2 } from "lucide-react";
 import { api } from "../lib/api";
 
 const statusConfig: Record<string, { color: string; label: string; icon: ReactNode }> = {
@@ -12,11 +12,13 @@ const statusConfig: Record<string, { color: string; label: string; icon: ReactNo
   cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "ملغي", icon: <XCircle className="w-3 h-3" /> },
 };
 
-export default function OrdersTab({ orders }: { orders: any[]; onRefresh?: () => void }) {
+export default function OrdersTab({ orders, onRefresh }: { orders: any[]; onRefresh?: () => void }) {
   const [pushStatus, setPushStatus] = useState<"loading" | "subscribed" | "not-subscribed" | "unsupported">("loading");
   const [pushMsg, setPushMsg] = useState<string | null>(null);
   const [pushBusy, setPushBusy] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
+  const [deleteAllLoading, setDeleteAllLoading] = useState(false);
 
   useEffect(() => {
     import("../hooks/usePushNotifications").then(({ getSubscriptionStatus }) => {
@@ -65,6 +67,32 @@ export default function OrdersTab({ orders }: { orders: any[]; onRefresh?: () =>
     }
     setPushBusy(false);
     setTimeout(() => setPushMsg(null), 8000);
+  }
+
+  async function handleDeleteOrder(id: string) {
+    if (!confirm("هل أنت متأكد من حذف هذا الطلب؟")) return;
+    setDeleteLoading(id);
+    try {
+      await api.deleteOrder(id);
+      if (onRefresh) onRefresh();
+    } catch (e: any) {
+      alert(e.message || "فشل حذف الطلب");
+    } finally {
+      setDeleteLoading(null);
+    }
+  }
+
+  async function handleDeleteAllOrders() {
+    if (!confirm("هل أنت متأكد من حذف جميع الطلبات؟ هذا الإجراء لا يمكن التراجع عنه.")) return;
+    setDeleteAllLoading(true);
+    try {
+      await api.deleteAllOrders();
+      if (onRefresh) onRefresh();
+    } catch (e: any) {
+      alert(e.message || "فشل حذف جميع الطلبات");
+    } finally {
+      setDeleteAllLoading(false);
+    }
   }
 
   return (
@@ -142,6 +170,16 @@ export default function OrdersTab({ orders }: { orders: any[]; onRefresh?: () =>
           <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400">
             الطلبات الواردة ({orders.length})
           </h3>
+          {orders.length > 0 && (
+            <button
+              onClick={handleDeleteAllOrders}
+              disabled={deleteAllLoading}
+              className="text-[11px] font-bold text-red-400 hover:text-red-300 transition disabled:opacity-50 inline-flex items-center gap-1"
+            >
+              {deleteAllLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+              حذف الكل
+            </button>
+          )}
         </div>
         
         <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
@@ -223,6 +261,17 @@ export default function OrdersTab({ orders }: { orders: any[]; onRefresh?: () =>
                       {config.icon}
                       {config.label}
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteOrder(order.id);
+                      }}
+                      disabled={deleteLoading === order.id}
+                      className="shrink-0 h-8 w-8 grid place-items-center rounded-md border border-red-500/30 text-red-400 hover:bg-red-500/10 transition disabled:opacity-50"
+                      aria-label="حذف الطلب"
+                    >
+                      {deleteLoading === order.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    </button>
                     <div className="hidden sm:flex h-8 w-8 rounded-full items-center justify-center border border-aurax-700 text-aurax-500 group-hover:border-aurax-500 group-hover:text-white transition">
                       <ArrowLeft className="w-4 h-4" />
                     </div>
