@@ -289,37 +289,41 @@ export default function ProductDetail() {
           </div>
 
           {/* Action buttons */}
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              onClick={handleAddToCart}
-              disabled={!product.inStock}
-              className="btn-outline flex-1"
-            >
-              <ShoppingBag className="h-4 w-4" />
-              {t("common.addToCart")}
-            </button>
-            <button
-              onClick={handleBuyNow}
-              disabled={!product.inStock}
-              className="btn-primary flex-1"
-            >
-              {t("common.buyNow")}
-              <Arrow className="h-4 w-4" />
-            </button>
-            <button
-              onClick={handleShare}
-              aria-label={lang === "ar" ? "مشاركة" : "Share"}
-              className="btn-outline px-4"
-            >
-              <Share2 className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => toggleWishlist(product)}
-              aria-label={t("nav.wishlist")}
-              className={`btn-outline px-4 ${isInWishlist(product.id) ? "text-red-500 border-red-500/50" : ""}`}
-            >
-              <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
-            </button>
+          <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <div className="flex gap-3 flex-1">
+              <button
+                onClick={handleAddToCart}
+                disabled={!product.inStock}
+                className="btn-outline flex-1"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                {t("common.addToCart")}
+              </button>
+              <button
+                onClick={handleBuyNow}
+                disabled={!product.inStock}
+                className="btn-primary flex-1"
+              >
+                {t("common.buyNow")}
+                <Arrow className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleShare}
+                aria-label={lang === "ar" ? "مشاركة" : "Share"}
+                className="btn-outline px-4"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => toggleWishlist(product)}
+                aria-label={t("nav.wishlist")}
+                className={`btn-outline px-4 ${isInWishlist(product.id) ? "text-red-500 border-red-500/50" : ""}`}
+              >
+                <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
+              </button>
+            </div>
           </div>
 
           {/* Description — below action buttons */}
