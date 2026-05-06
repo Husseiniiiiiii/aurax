@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext";
-import { formatIqd, toIqd } from "../utils/currency";
+import { formatIqd } from "../utils/currency";
 import { api, API_ENABLED } from "../lib/api";
 import { IRAQ_PROVINCES } from "../data/provinces";
 
@@ -35,7 +35,7 @@ export default function Checkout() {
   const [cartStale, setCartStale] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const subtotalIqd = toIqd(subtotal);
+  const subtotalIqd = subtotal;
   const shippingIqd = 5000;
   const totalIqd = subtotalIqd + shippingIqd;
   const currency = lang === "ar" ? "د.ع" : "IQD";

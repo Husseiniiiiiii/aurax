@@ -109,7 +109,8 @@ function Slot({
     setBusy(true);
     try {
       const blob = await compressImage(file, maxWidth, quality);
-      const f = new File([blob], "image.jpg", { type: "image/jpeg" });
+      const ext = blob.type === "image/webp" ? "webp" : "jpg";
+      const f = new File([blob], `image.${ext}`, { type: blob.type });
       const preview = URL.createObjectURL(f);
       onPicked({ kind: "file", file: f, preview });
     } catch (e: any) {
@@ -247,11 +248,18 @@ export function useRevokeOnUnmount(items: ImageItem[]) {
   }, []);
 }
 
+/**
+ * Compress an image using Canvas → WebP (fallback JPEG).
+ * Uses progressive quality reduction to hit the target file size.
+ */
 function compressImage(
   file: File,
-  maxWidth: number,
+  maxDim: number,
   quality: number
 ): Promise<Blob> {
+  const TARGET_KB = 300; // aim for ≤300KB
+  const MIN_QUALITY = 0.55;
+
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = () => reject(new Error("فشل قراءة الملف"));
@@ -260,7 +268,7 @@ function compressImage(
       img.onerror = () => reject(new Error("ملف صورة غير صالح"));
       img.onload = () => {
         const { width, height } = img;
-        const scale = Math.min(1, maxWidth / Math.max(width, height));
+        const scale = Math.min(1, maxDim / Math.max(width, height));
         const w = Math.round(width * scale);
         const h = Math.round(height * scale);
         const canvas = document.createElement("canvas");
@@ -268,12 +276,40 @@ function compressImage(
         canvas.height = h;
         const ctx = canvas.getContext("2d");
         if (!ctx) return reject(new Error("Canvas غير مدعوم"));
+
+        // Enable image smoothing for better downscale quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
         ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error("فشل ضغط الصورة"))),
-          "image/jpeg",
-          quality
-        );
+
+        // Check if WebP is supported
+        const supportsWebP = canvas
+          .toDataURL("image/webp")
+          .startsWith("data:image/webp");
+        const mime = supportsWebP ? "image/webp" : "image/jpeg";
+
+        // Progressive quality reduction to hit target size
+        const tryCompress = (q: number) => {
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) return reject(new Error("فشل ضغط الصورة"));
+              const sizeKB = blob.size / 1024;
+              // If still too large and quality can go lower, try again
+              if (sizeKB > TARGET_KB && q > MIN_QUALITY) {
+                tryCompress(q - 0.08);
+              } else {
+                console.log(
+                  `📸 Compressed: ${(file.size / 1024).toFixed(0)}KB → ${sizeKB.toFixed(0)}KB (${mime}, q=${q.toFixed(2)}, ${w}×${h})`
+                );
+                resolve(blob);
+              }
+            },
+            mime,
+            q
+          );
+        };
+
+        tryCompress(quality);
       };
       img.src = reader.result as string;
     };

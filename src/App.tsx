@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
 import AdminOrderDetail from "./pages/AdminOrderDetail";
+import Wishlist from "./pages/Wishlist";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/track" element={<TrackOrder />} />
           <Route path="/search" element={<SearchPage />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/orders/:id" element={<AdminOrderDetail />} />

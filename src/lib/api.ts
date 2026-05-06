@@ -35,9 +35,9 @@ export interface ApiProduct {
   sizes: string[];
   colors: string[];
   gender: string | null;
+  stock: number;
   categoryId: string;
   category?: ApiCategory;
-  stock?: number;
   createdAt: string;
   updatedAt: string;
 }

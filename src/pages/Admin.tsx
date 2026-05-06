@@ -325,6 +325,7 @@ function CategoriesTab({
   const [editing, setEditing] = useState<ApiCategory | null>(null);
   const [name, setName] = useState("");
   const [nameEn, setNameEn] = useState("");
+  const [gender, setGender] = useState("");
   const [images, setImages] = useState<ImageItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -335,6 +336,7 @@ function CategoriesTab({
     setEditing(null);
     setName("");
     setNameEn("");
+    setGender("");
     setImages([]);
     setErr(null);
   }
@@ -343,6 +345,7 @@ function CategoriesTab({
     setEditing(c);
     setName(c.name);
     setNameEn(c.nameEn);
+    setGender(c.gender || "");
     setImages(c.image ? itemsFromUrls(c.image) : []);
     setErr(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -359,6 +362,7 @@ function CategoriesTab({
         slug: editing?.slug || slug,
         name,
         nameEn,
+        gender: gender || null,
         image: urls[0] || null,
       };
       if (editing) {
@@ -425,6 +429,19 @@ function CategoriesTab({
             />
           </Field>
         </div>
+
+        <Field label="القسم" required hint="اختر أين ستظهر هذه الفئة">
+          <select
+            required
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className={inputCls}
+          >
+            <option value="">— اختر القسم —</option>
+            <option value="men-sub">👔 رجالي</option>
+            <option value="women-sub">👗 نسائي</option>
+          </select>
+        </Field>
 
         <div>
           <div className="text-xs font-bold text-aurax-200 mb-1.5">
@@ -588,6 +605,17 @@ function CategoryRow({
         <div className="text-[11px] text-aurax-500 truncate" dir="ltr">
           {category.slug} · {category.nameEn}
         </div>
+        {category.gender && (
+          <span className={`inline-block mt-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-full border ${
+            category.gender === "men" || category.gender === "men-sub" ? "bg-blue-500/10 text-blue-400 border-blue-500/30" :
+            category.gender === "women" || category.gender === "women-sub" ? "bg-pink-500/10 text-pink-400 border-pink-500/30" :
+            "bg-aurax-500/10 text-aurax-300 border-aurax-500/20"
+          }`}>
+            {category.gender === "men" || category.gender === "men-sub" ? "رجالي" :
+             category.gender === "women" || category.gender === "women-sub" ? "نسائي" :
+             "مشترك"}
+          </span>
+        )}
       </div>
 
       <label
@@ -698,14 +726,15 @@ function ProductsTab({
   const [sizes, setSizes] = useState("");
   const [colors, setColors] = useState<string[]>([]);
   const [badge, setBadge] = useState("");
-  const [inStock, setInStock] = useState(true);
+  const [stock, setStock] = useState("");
   const [featured, setFeatured] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const totalSteps = 4;
 
-  // Category filter for the LIST (not for the form)
+  // Gender + Category filters for the LIST (not for the form)
+  const [filterGender, setFilterGender] = useState<"all" | "men" | "women">("all");
   const [filterCat, setFilterCat] = useState<string>("all");
 
   const slug = useMemo(() => {
@@ -727,7 +756,7 @@ function ProductsTab({
     setSizes("");
     setColors([]);
     setBadge("");
-    setInStock(true);
+    setStock("");
     setFeatured(false);
     setErr(null);
     setStep(1);
@@ -757,7 +786,7 @@ function ProductsTab({
     setSizes((p.sizes || []).join(", "));
     setColors(p.colors || []);
     setBadge(p.badge || "");
-    setInStock(p.inStock !== false);
+    setStock(p.stock != null ? String(p.stock) : "");
     setFeatured(!!p.featured);
     setErr(null);
     setStep(1);
@@ -809,7 +838,8 @@ function ProductsTab({
           .filter(Boolean),
         colors,
         badge: badge.trim() || null,
-        inStock,
+        stock: stock ? Number(stock) : 0,
+        inStock: stock ? Number(stock) > 0 : true,
         featured,
       };
       if (editing) {
@@ -837,13 +867,65 @@ function ProductsTab({
     }
   }
 
-  const filtered = useMemo(
-    () =>
-      filterCat === "all"
-        ? products
-        : products.filter((p) => p.categoryId === filterCat),
-    [products, filterCat]
+  // Build a map of categoryId → gender for fast lookup
+  const catGenderMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of categories) {
+      if (c.gender) m.set(c.id, c.gender);
+    }
+    return m;
+  }, [categories]);
+
+  // Two-tier filtering: gender section first, then category
+  const filtered = useMemo(() => {
+    let list = products;
+
+    // Filter by gender section
+    if (filterGender !== "all") {
+      const genderTag = `${filterGender}-sub`; // e.g. "men-sub"
+      list = list.filter((p) => {
+        const g = catGenderMap.get(p.categoryId);
+        return g === genderTag || g === filterGender || g === "both-sub";
+      });
+    }
+
+    // Then filter by specific category
+    if (filterCat !== "all") {
+      list = list.filter((p) => p.categoryId === filterCat);
+    }
+
+    return list;
+  }, [products, filterGender, filterCat, catGenderMap]);
+
+  // Only subcategories (exclude main section circles gender=men/women)
+  const subCategories = useMemo(
+    () => categories.filter((c) => c.gender === "men-sub" || c.gender === "women-sub" || c.gender === "both-sub"),
+    [categories]
   );
+
+  // Categories visible under the current gender tab
+  const visibleCategories = useMemo(() => {
+    if (filterGender === "all") return subCategories;
+    const genderTag = `${filterGender}-sub`;
+    return subCategories.filter(
+      (c) => c.gender === genderTag || c.gender === "both-sub"
+    );
+  }, [subCategories, filterGender]);
+
+  // Counts for gender tabs
+  const menCount = useMemo(() => {
+    return products.filter((p) => {
+      const g = catGenderMap.get(p.categoryId);
+      return g === "men-sub" || g === "men" || g === "both-sub";
+    }).length;
+  }, [products, catGenderMap]);
+
+  const womenCount = useMemo(() => {
+    return products.filter((p) => {
+      const g = catGenderMap.get(p.categoryId);
+      return g === "women-sub" || g === "women" || g === "both-sub";
+    }).length;
+  }, [products, catGenderMap]);
 
   if (view === "form") {
     return (
@@ -922,9 +1004,9 @@ function ProductsTab({
                   className={inputCls}
                 >
                   <option value="">— اختر —</option>
-                  {categories.map((c) => (
+                  {subCategories.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {c.name} — {c.gender === "men-sub" ? "👔 رجالي" : c.gender === "women-sub" ? "👗 نسائي" : "🔄 مشترك"}
                     </option>
                   ))}
                 </select>
@@ -1030,12 +1112,30 @@ function ProductsTab({
               <Field label="الألوان" hint="اضغط على لون لإضافته أو حذفه">
                 <ColorsPicker value={colors} onChange={setColors} />
               </Field>
-              <div className="grid grid-cols-1 gap-2">
-                <Toggle
-                  label="متوفر بالمخزون"
-                  checked={inStock}
-                  onChange={setInStock}
+              <Field label="الكمية بالمخزون" hint="اكتب 0 إذا نفد المنتج">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  value={stock}
+                  onChange={(e) => setStock(e.target.value)}
+                  placeholder="مثال: 50"
+                  className={inputCls}
+                  dir="ltr"
                 />
+                {stock && Number(stock) > 0 ? (
+                  <div className="mt-1 text-[10px] font-bold text-green-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
+                    متوفر — {Number(stock).toLocaleString()} قطعة
+                  </div>
+                ) : stock === "0" ? (
+                  <div className="mt-1 text-[10px] font-bold text-red-400 flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    نفد من المخزون
+                  </div>
+                ) : null}
+              </Field>
+              <div className="grid grid-cols-1 gap-2">
                 <Toggle
                   label="عرض في البانر الرئيسي"
                   checked={featured}
@@ -1101,7 +1201,7 @@ function ProductsTab({
 
   // ─── List view ───
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Add new product */}
       <button
         type="button"
@@ -1112,81 +1212,181 @@ function ProductsTab({
         إضافة منتج جديد
       </button>
 
-      {/* Category filter tabs */}
-      <div>
-        <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400 mb-2">
-          المنتجات ({filtered.length})
-        </h3>
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-          <CatChip
-            active={filterCat === "all"}
-            onClick={() => setFilterCat("all")}
-            label={`الكل (${products.length})`}
-          />
-          {categories.map((c) => {
-            const count = products.filter(
-              (p) => p.categoryId === c.id
-            ).length;
+      {/* ─── Gender section tabs ─── */}
+      <div className="rounded-xl border border-aurax-700 bg-aurax-900/40 p-1">
+        <div className="grid grid-cols-3 gap-1">
+          {([
+            { id: "all" as const, label: "الكل", count: products.length, emoji: "📦", color: "white" },
+            { id: "men" as const, label: "رجالي", count: menCount, emoji: "👔", color: "blue" },
+            { id: "women" as const, label: "نسائي", count: womenCount, emoji: "👗", color: "pink" },
+          ] as const).map(({ id, label, count, emoji, color }) => {
+            const active = filterGender === id;
             return (
-              <CatChip
-                key={c.id}
-                active={filterCat === c.id}
-                onClick={() => setFilterCat(c.id)}
-                label={`${c.name} (${count})`}
-              />
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  setFilterGender(id);
+                  setFilterCat("all");
+                }}
+                className={`relative px-2 py-2.5 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all duration-300 ${
+                  active
+                    ? color === "blue"
+                      ? "bg-blue-500/15 text-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+                      : color === "pink"
+                      ? "bg-pink-500/15 text-pink-400 shadow-[0_0_20px_rgba(236,72,153,0.15)]"
+                      : "bg-white/10 text-white shadow-[0_0_20px_rgba(255,255,255,0.08)]"
+                    : "text-aurax-500 hover:text-aurax-300"
+                }`}
+              >
+                <span className="text-sm">{emoji}</span>
+                <span>{label}</span>
+                <span
+                  className={`min-w-[1.25rem] h-[18px] px-1 rounded-full text-[10px] font-black inline-flex items-center justify-center tabular-nums transition-all ${
+                    active
+                      ? color === "blue"
+                        ? "bg-blue-500/30 text-blue-300"
+                        : color === "pink"
+                        ? "bg-pink-500/30 text-pink-300"
+                        : "bg-white/20 text-white"
+                      : "bg-aurax-800 text-aurax-500"
+                  }`}
+                >
+                  {count}
+                </span>
+                {active && (
+                  <span
+                    className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full transition-all ${
+                      color === "blue"
+                        ? "bg-blue-400"
+                        : color === "pink"
+                        ? "bg-pink-400"
+                        : "bg-white"
+                    }`}
+                  />
+                )}
+              </button>
             );
           })}
         </div>
       </div>
 
-      <div className="space-y-2">
-        {filtered.map((p) => (
-          <div
-            key={p.id}
-            className="p-2.5 rounded-lg flex items-center gap-3 border border-aurax-700 bg-aurax-900/30"
-          >
-            <img
-              src={p.image}
-              alt={p.name}
-              className="h-14 w-14 rounded-md object-cover bg-aurax-800 shrink-0"
+      {/* ─── Category sub-filter chips ─── */}
+      {visibleCategories.length > 0 && (
+        <div>
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+            <CatChip
+              active={filterCat === "all"}
+              onClick={() => setFilterCat("all")}
+              label={`الكل (${filterGender === "all" ? products.length : filterGender === "men" ? menCount : womenCount})`}
             />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm truncate flex items-center gap-1.5">
-                {p.name}
-                {p.featured && (
-                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
-                )}
-                {!p.inStock && (
-                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
-                    نفد
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-aurax-500 truncate">
-                {p.category?.name} · {p.price.toLocaleString()} د.ع
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                onClick={() => startEdit(p)}
-                className="h-8 w-8 grid place-items-center rounded-md text-aurax-300 border border-aurax-700 hover:border-white transition"
-                aria-label="تعديل"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                onClick={() => handleDelete(p.id)}
-                className="h-8 w-8 grid place-items-center rounded-md text-red-400 border border-red-500/30 hover:bg-red-500/10 transition"
-                aria-label="حذف"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-            </div>
+            {visibleCategories.map((c) => {
+              const count = products.filter(
+                (p) => p.categoryId === c.id
+              ).length;
+              return (
+                <CatChip
+                  key={c.id}
+                  active={filterCat === c.id}
+                  onClick={() => setFilterCat(c.id)}
+                  label={`${c.name} (${count})`}
+                />
+              );
+            })}
           </div>
-        ))}
+        </div>
+      )}
+
+      {/* ─── Products header ─── */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-extrabold tracking-widest uppercase text-aurax-400">
+          المنتجات ({filtered.length})
+        </h3>
+        {filterGender !== "all" && (
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+            filterGender === "men"
+              ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+              : "bg-pink-500/10 text-pink-400 border border-pink-500/20"
+          }`}>
+            {filterGender === "men" ? "👔 قسم رجالي" : "👗 قسم نسائي"}
+          </span>
+        )}
+      </div>
+
+      {/* ─── Product list ─── */}
+      <div className="space-y-2">
+        {filtered.map((p) => {
+          const g = catGenderMap.get(p.categoryId);
+          const isMen = g === "men-sub" || g === "men";
+          return (
+            <div
+              key={p.id}
+              className="p-2.5 rounded-lg flex items-center gap-3 border border-aurax-700 bg-aurax-900/30 hover:border-aurax-600 transition-colors"
+            >
+              <div className="relative shrink-0">
+                <img
+                  src={p.image}
+                  alt={p.name}
+                  className="h-14 w-14 rounded-md object-cover bg-aurax-800"
+                />
+                {/* Gender dot indicator */}
+                <span
+                  className={`absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-aurax-900 ${
+                    isMen ? "bg-blue-400" : "bg-pink-400"
+                  }`}
+                  title={isMen ? "رجالي" : "نسائي"}
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm truncate flex items-center gap-1.5">
+                  {p.name}
+                  {p.featured && (
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                  )}
+                  {p.stock != null && p.stock > 0 ? (
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-green-500/15 text-green-400 border border-green-500/25">
+                      {p.stock}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30">
+                      نفد
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-aurax-500 truncate">
+                  {p.category?.name} · {p.price.toLocaleString()} د.ع
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  onClick={() => startEdit(p)}
+                  className="h-8 w-8 grid place-items-center rounded-md text-aurax-300 border border-aurax-700 hover:border-white transition"
+                  aria-label="تعديل"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="h-8 w-8 grid place-items-center rounded-md text-red-400 border border-red-500/30 hover:bg-red-500/10 transition"
+                  aria-label="حذف"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
         {filtered.length === 0 && (
-          <div className="p-6 rounded-lg text-center text-aurax-500 text-sm border border-dashed border-aurax-700">
-            لا توجد منتجات في هذه الفئة
+          <div className="p-8 rounded-xl text-center border border-dashed border-aurax-700 bg-aurax-900/20">
+            <div className="text-2xl mb-2">
+              {filterGender === "men" ? "👔" : filterGender === "women" ? "👗" : "📦"}
+            </div>
+            <div className="text-aurax-500 text-sm font-bold">
+              لا توجد منتجات {filterGender === "men" ? "في القسم الرجالي" : filterGender === "women" ? "في القسم النسائي" : "في هذه الفئة"}
+            </div>
+            <div className="text-aurax-600 text-xs mt-1">
+              أضف منتجات جديدة باستخدام الزر أعلاه
+            </div>
           </div>
         )}
       </div>

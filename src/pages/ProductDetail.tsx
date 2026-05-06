@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight as ChevronRightIcon, X as XIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight as ChevronRightIcon, X as XIcon, Share2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -28,6 +28,55 @@ export default function ProductDetail() {
   const { t, lang } = useLanguage();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const Arrow = lang === "ar" ? ArrowLeft : ArrowRight;
+
+  // Update metadata when product loads
+  useEffect(() => {
+    if (product) {
+      const displayName = lang === "ar" ? product.name : product.nameEn;
+      const priceText = formatIqd(product.price, lang);
+
+      // Update title
+      document.title = `${displayName} - AURAX`;
+
+      // Update Open Graph meta tags
+      const updateMetaTag = (property: string, content: string) => {
+        let tag = document.querySelector(`meta[property="${property}"]`) as HTMLMetaElement;
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('property', property);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      const updateMetaName = (name: string, content: string) => {
+        let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement;
+        if (!tag) {
+          tag = document.createElement('meta');
+          tag.setAttribute('name', name);
+          document.head.appendChild(tag);
+        }
+        tag.setAttribute('content', content);
+      };
+
+      updateMetaTag('og:title', displayName);
+      updateMetaTag('og:description', product.description || `${displayName} - ${priceText}`);
+      updateMetaTag('og:image', product.image);
+      updateMetaTag('og:url', window.location.href);
+      updateMetaTag('og:type', 'product');
+      updateMetaTag('product:price:amount', String(product.price));
+      updateMetaTag('product:price:currency', 'IQD');
+      updateMetaName('twitter:card', 'summary_large_image');
+      updateMetaName('twitter:title', displayName);
+      updateMetaName('twitter:description', product.description || `${displayName} - ${priceText}`);
+      updateMetaName('twitter:image', product.image);
+    }
+
+    return () => {
+      // Reset to default when leaving product page
+      document.title = 'AURAX';
+    };
+  }, [product, lang]);
 
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -86,6 +135,25 @@ export default function ProductDetail() {
     navigate("/cart");
   };
 
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        const displayName = lang === "ar" ? product.name : product.nameEn;
+        await navigator.share({
+          title: displayName,
+          text: `${displayName} - ${formatIqd(product.price, lang)}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share canceled or failed', err);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(window.location.href);
+      alert(lang === "ar" ? "تم نسخ الرابط" : "Link copied to clipboard");
+    }
+  };
+
   const displayName = lang === "ar" ? product.name : product.nameEn;
   const subName = lang === "ar" ? product.nameEn : product.name;
 
@@ -112,7 +180,7 @@ export default function ProductDetail() {
           alt={displayName}
         />
 
-        <div>
+        <div className="min-w-0">
           <h1 className="text-3xl md:text-4xl font-black">
             {displayName}
           </h1>
@@ -143,27 +211,6 @@ export default function ProductDetail() {
                   %
                 </span>
               </>
-            )}
-          </div>
-
-          {/* Stock badge */}
-          <div className="mt-3">
-            {product.inStock ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/30 text-green-500 text-xs font-extrabold px-2.5 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                {product.stock != null && product.stock > 0
-                  ? lang === "ar"
-                    ? `متبقي ${product.stock} قطعة`
-                    : `${product.stock} left in stock`
-                  : lang === "ar"
-                  ? "متوفر"
-                  : "In stock"}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-extrabold px-2.5 py-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-                {lang === "ar" ? "غير متوفر" : "Out of stock"}
-              </span>
             )}
           </div>
 
@@ -221,8 +268,12 @@ export default function ProductDetail() {
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity((q) => q + 1)}
-                className="h-11 w-11 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 rounded-l-xl"
+                onClick={() => setQuantity((q) => {
+                  const maxStock = product.stock ? Math.min(10, product.stock) : 10;
+                  return q < maxStock ? q + 1 : q;
+                })}
+                disabled={product.stock && quantity >= Math.min(10, product.stock)}
+                className="h-11 w-11 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 rounded-l-xl disabled:opacity-30 disabled:cursor-not-allowed"
               >
               <Plus className="h-4 w-4" />
               </button>
@@ -230,6 +281,11 @@ export default function ProductDetail() {
             <span className="text-sm text-aurax-500">
               {t("product.quantity")}
             </span>
+            {product.stock != null && product.stock > 0 && (
+              <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                • {lang === "ar" ? ` متوفر : ${product.stock} قطعة` : ` Available : ${product.stock} items`}
+              </span>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -251,6 +307,13 @@ export default function ProductDetail() {
               <Arrow className="h-4 w-4" />
             </button>
             <button
+              onClick={handleShare}
+              aria-label={lang === "ar" ? "مشاركة" : "Share"}
+              className="btn-outline px-4"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => toggleWishlist(product)}
               aria-label={t("nav.wishlist")}
               className={`btn-outline px-4 ${isInWishlist(product.id) ? "text-red-500 border-red-500/50" : ""}`}
@@ -261,11 +324,11 @@ export default function ProductDetail() {
 
           {/* Description — below action buttons */}
           {product.description && (
-            <div className="mt-8 pt-6 border-t border-aurax-200/70 dark:border-aurax-800/90">
+            <div className="mt-8 pt-6 border-t border-aurax-200/70 dark:border-aurax-800/90 overflow-hidden">
               <h4 className="text-sm font-bold mb-2">
                 {lang === "ar" ? "الوصف" : "Description"}
               </h4>
-              <p className="text-aurax-600 dark:text-aurax-300 leading-relaxed">
+              <p className="text-aurax-600 dark:text-aurax-300 leading-relaxed whitespace-pre-line break-words overflow-wrap-anywhere max-w-full" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
                 {product.description}
               </p>
             </div>

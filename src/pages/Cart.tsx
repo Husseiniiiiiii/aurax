@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useLanguage } from "../context/LanguageContext";
-import { formatIqd, toIqd } from "../utils/currency";
+import { formatIqd } from "../utils/currency";
 
 export default function Cart() {
   const { items, removeFromCart, updateQuantity, subtotal, clearCart } =
@@ -10,7 +10,7 @@ export default function Cart() {
   const { t, lang } = useLanguage();
 
   // Flat shipping rate: 5,000 IQD
-  const subtotalIqd = toIqd(subtotal);
+  const subtotalIqd = subtotal;
   const shippingIqd = 5000;
   const totalIqd = subtotalIqd + shippingIqd;
   const currency = lang === "ar" ? "د.ع" : "IQD";
@@ -95,10 +95,14 @@ export default function Cart() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() =>
-                      updateQuantity(item.product.id, item.quantity + 1)
-                    }
-                    className="h-8 w-8 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800"
+                    onClick={() => {
+                      const maxStock = item.product.stock ? Math.min(10, item.product.stock) : 10;
+                      if (item.quantity < maxStock) {
+                        updateQuantity(item.product.id, item.quantity + 1);
+                      }
+                    }}
+                    disabled={item.product.stock && item.quantity >= Math.min(10, item.product.stock)}
+                    className="h-8 w-8 grid place-items-center hover:bg-aurax-100 dark:hover:bg-aurax-800 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
